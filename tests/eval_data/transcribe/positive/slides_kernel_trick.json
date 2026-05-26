@@ -1,0 +1,7 @@
+{
+  "mode": "transcribe",
+  "key_terms": ["perceptron", "kernel trick", "basis expansion", "dual form", "feature space", "dot products"],
+  "expected_section_count": 3,
+  "min_recall": 0.7,
+  "notes": "Clean typed lecture slides on perceptron with basis expansion and the kernel trick. Three slides with clear headings and mathematical notation."
+}

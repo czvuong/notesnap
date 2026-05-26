@@ -1,0 +1,6 @@
+{
+  "mode": "transcribe",
+  "key_terms": ["Spectral Embeddings", "Probability Distributions", "Gaussian", "Multivariate", "KL-Divergence", "Autoencoder", "MLE", "Normal", "Poisson", "Binomial"],
+  "min_recall": 0.6,
+  "notes": "Very dense two-column handwritten ML cheatsheet covering spectral embeddings, probability distributions, Gaussian processes, and comparing methods. Extremely small handwriting — min recall lowered to 0.6."
+}

@@ -1,0 +1,8 @@
+{
+  "mode": "study_guide",
+  "key_concepts": ["contrastive learning", "PMI matrix", "Word2Vec", "SimCLR", "distributional hypothesis"],
+  "should_have_summary": true,
+  "should_explain_terms": ["contrastive learning", "PMI", "Word2Vec"],
+  "min_recall": 0.7,
+  "notes": "Notes cover three distinct embedding techniques — should produce a study guide that explains the purpose and mechanism of each. SimCLR and Word2Vec sections are well-structured."
+}

@@ -1,0 +1,9 @@
+{
+  "_comment": "Rename to match your image (e.g. lecture_slide.json for lecture_slide.jpg)",
+  "mode": "study_guide",
+  "key_concepts": ["RC vs ES", "burden side", "benefit side"],
+  "should_have_summary": true,
+  "should_explain_terms": ["RC", "ES"],
+  "min_recall": 0.7,
+  "notes": "Should restructure board notes into a cleaner study guide with explanations. Explanation check is heuristic: term must appear within 150 chars of a phrase like 'means', 'refers to', 'is defined as', etc."
+}

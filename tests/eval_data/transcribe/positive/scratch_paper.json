@@ -1,0 +1,6 @@
+{
+  "mode": "transcribe",
+  "key_terms": ["partial", "2x"],
+  "min_recall": 0.7,
+  "notes": "Handwritten math scratch paper with calculus notation. The model renders equations in LaTeX (e.g. \\mathcal{F}(x), 2x^5) so only terms appearing verbatim in OCR output are tested. 'partial' appears in partial derivative notation; '2x' appears as substring in coefficient expressions. Original terms (f(x), x1, x2, derivative, matrix) dropped because the model uses LaTeX notation that doesn't match those literal strings."
+}

@@ -1,0 +1,7 @@
+{
+  "mode": "study_guide",
+  "should_warn": true,
+  "should_be_low_confidence": true,
+  "should_not_have_summary": true,
+  "notes": "Diagram-heavy image with overlapping colored arrows and sparse text — not suitable input for study guide generation. System should warn rather than fabricate conceptual explanations from a visual diagram."
+}

@@ -1,0 +1,7 @@
+{
+  "mode": "transcribe",
+  "key_terms": ["contrastive learning", "word embeddings", "PMI", "Word2Vec", "SimCLR", "similar pairs", "dissimilar pairs", "distributional hypothesis"],
+  "expected_section_count": 3,
+  "min_recall": 0.7,
+  "notes": "Clean handwritten ML notes with numbered sections on contrastive embeddings, word embeddings (PMI/Word2Vec), and SimCLR. Should extract all three topics cleanly."
+}

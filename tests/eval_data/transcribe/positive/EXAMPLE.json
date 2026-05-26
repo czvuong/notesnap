@@ -1,0 +1,8 @@
+{
+  "_comment": "Rename this file to match your image (e.g. lecture_slide.json for lecture_slide.jpg)",
+  "mode": "transcribe",
+  "key_terms": ["RC", "ES", "burden", "benefit"],
+  "expected_section_count": 3,
+  "min_recall": 0.7,
+  "notes": "Should preserve board structure closely. Key terms are exact substrings checked against extracted text."
+}

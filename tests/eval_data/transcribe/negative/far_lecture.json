@@ -1,0 +1,5 @@
+{
+  "mode": "transcribe",
+  "should_warn": true,
+  "notes": "Photo taken from the back of a lecture hall — projector screens visible but taken from a distance. Note: the OCR model can actually read slide text from distance, so low confidence is not a valid expectation. The minimum bar is that the model warns about potential quality issues. This case primarily tests whether quality signals propagate when image conditions are suboptimal."
+}

@@ -1,0 +1,7 @@
+{
+  "mode": "study_guide",
+  "should_warn": true,
+  "should_be_low_confidence": true,
+  "should_not_have_summary": true,
+  "notes": "Outdoor photo of furniture — not academic content. System must not produce a study guide and should flag the input as invalid."
+}

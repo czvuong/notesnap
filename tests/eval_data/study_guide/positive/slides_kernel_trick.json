@@ -1,0 +1,8 @@
+{
+  "mode": "study_guide",
+  "key_concepts": ["kernel trick", "basis expansion", "dual representation", "feature space", "dot products"],
+  "should_have_summary": true,
+  "should_explain_terms": ["kernel trick", "dual form"],
+  "min_recall": 0.7,
+  "notes": "Slides explain the kernel trick motivation and mechanics — should produce a study guide that explains why the kernel trick avoids explicit high-dimensional computation."
+}

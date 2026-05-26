@@ -1,0 +1,6 @@
+{
+  "mode": "transcribe",
+  "should_warn": true,
+  "should_be_low_confidence": true,
+  "notes": "Very faint/overexposed handwritten notes — pencil writing is barely visible against the white paper. System should flag low confidence rather than attempt to fabricate content from an unreadable image."
+}

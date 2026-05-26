@@ -1,0 +1,8 @@
+{
+  "mode": "study_guide",
+  "key_concepts": ["nearest neighbor", "Bayes rule", "generative", "discriminative", "curse of dimensionality"],
+  "should_have_summary": true,
+  "should_explain_terms": ["nearest neighbor", "Bayes rule", "generative model"],
+  "min_recall": 0.7,
+  "notes": "Well-structured ML notes — should produce a study guide covering classifier types, kNN tradeoffs, and generative modeling with explanations of key terms."
+}

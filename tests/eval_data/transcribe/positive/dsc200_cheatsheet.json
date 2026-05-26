@@ -1,0 +1,6 @@
+{
+  "mode": "transcribe",
+  "key_terms": ["Strings", "Dictionaries", "Regular Expressions", "NumPy", "Broadcasting", "Matplotlib", "Seaborn", "lambda", "subplots"],
+  "min_recall": 0.65,
+  "notes": "DSC 200 midterm cheatsheet — very dense handwritten notes covering Python strings, dicts, regex, NumPy, Matplotlib, and Seaborn. Two-column layout. Min recall lowered to 0.65 due to density and small handwriting."
+}

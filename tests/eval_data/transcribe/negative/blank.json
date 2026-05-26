@@ -1,0 +1,6 @@
+{
+  "mode": "transcribe",
+  "should_warn": true,
+  "should_be_low_confidence": true,
+  "notes": "Completely blank lined paper on iPad — no content whatsoever. System should not hallucinate notes and must flag low confidence."
+}

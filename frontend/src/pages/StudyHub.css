@@ -1,0 +1,250 @@
+/* ── Page ─────────────────────────────────────────────────────────────────── */
+.study-hub { max-width: 860px; }
+
+/* ── Toolbar ──────────────────────────────────────────────────────────────── */
+.hub-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.hub-toolbar .search-wrap { flex: 1 1 0; min-width: 0; position: relative; }
+.hub-toolbar .search-icon {
+  position: absolute; left: 10px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-faint); pointer-events: none;
+}
+.hub-toolbar .search-input { width: 100%; padding-left: 36px; padding-right: 36px; }
+.hub-toolbar .search-clear {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+}
+/* Needs double-class specificity (0,2,0) to beat global .select { width:100% } */
+.hub-toolbar .hub-course-select {
+  width: auto;
+  min-width: 130px;
+  max-width: 180px;
+  flex: 0 0 auto;
+}
+
+/* ── Loading / empty ──────────────────────────────────────────────────────── */
+.hub-loading {
+  display: flex;
+  justify-content: center;
+  padding: 80px 0;
+}
+.hub-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 80px 24px;
+  text-align: center;
+}
+.hub-empty-icon { color: var(--color-text-faint); }
+
+/* ── Course groups ────────────────────────────────────────────────────────── */
+.hub-groups { display: flex; flex-direction: column; gap: 28px; }
+
+.hub-group-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+}
+.hub-group-count {
+  background: var(--color-surface-raised);
+  border-radius: 99px;
+  padding: 1px 7px;
+  font-size: 0.7rem;
+  color: var(--color-text-faint);
+}
+
+/* ── Note cards ───────────────────────────────────────────────────────────── */
+.hub-cards { display: flex; flex-direction: column; gap: 8px; }
+
+.hub-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.hub-card:hover {
+  border-color: var(--color-primary-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.hub-card-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;   /* take all space between checkbox and arrow, keeps text left-aligned */
+}
+.hub-card-icon {
+  width: 34px; height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-xlight);
+  color: var(--color-primary);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.hub-card-info { min-width: 0; }
+.hub-card-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+.hub-card-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+.hub-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hub-card-btn { flex-shrink: 0; }
+
+/* ── Select-all button ────────────────────────────────────────────────────── */
+.hub-select-all { white-space: nowrap; flex-shrink: 0; }
+
+/* ── Card selection state ─────────────────────────────────────────────────── */
+.hub-card { cursor: pointer; user-select: none; }
+.hub-card--selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-xlight);
+  box-shadow: 0 0 0 3px rgba(132, 88, 179, 0.1);
+}
+.hub-card-check {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  color: var(--color-text-faint);
+}
+.hub-check-icon { transition: color var(--transition); }
+.hub-check-icon--on { color: var(--color-primary); }
+
+/* ── Selection action bar ─────────────────────────────────────────────────── */
+.hub-selection-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-primary-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  /* Stick below the page header as user scrolls */
+  position: sticky;
+  top: 12px;
+  z-index: 50;
+}
+.hub-selection-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+.hub-selection-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.hub-session-error {
+  font-size: 0.8125rem;
+  color: var(--color-danger, #d44);
+  flex: 1 1 100%;
+}
+
+/* ── Session overlay ──────────────────────────────────────────────────────── */
+.session-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 200;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 16px 24px;
+  overflow-y: auto;
+}
+.session-modal {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl, 16px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+  width: 100%;
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.session-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1.5px solid var(--color-border-subtle);
+  background: var(--color-bg);
+}
+.session-modal-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.session-modal-tool { color: var(--color-text); }
+.session-modal-dot  { color: var(--color-text-faint); }
+.session-note-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.session-note-chip {
+  background: var(--color-primary-xlight);
+  color: var(--color-primary);
+  border-radius: 99px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.session-modal-body {
+  padding: 24px 20px;
+  overflow-y: auto;
+  max-height: calc(90vh - 80px);
+}
+
+/* ── Session history cards ────────────────────────────────────────────────── */
+.hub-session-card { cursor: pointer; }
+.hub-session-count {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--color-text-muted, #888);
+}
+
+/* ── Spin utility ─────────────────────────────────────────────────────────── */
+.spin { animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

@@ -1,0 +1,31 @@
+# Environment — never commit API keys
+.env
+*.env
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+dist/
+*.egg-info/
+venv/
+.venv/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+.venv/

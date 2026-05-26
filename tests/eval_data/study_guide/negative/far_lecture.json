@@ -1,0 +1,7 @@
+{
+  "mode": "study_guide",
+  "should_warn": true,
+  "should_be_low_confidence": true,
+  "should_not_have_summary": true,
+  "notes": "Far-away lecture hall photo — projector content unreadable at this distance. System should not generate a study guide from unreadable input."
+}

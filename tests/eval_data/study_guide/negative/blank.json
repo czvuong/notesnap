@@ -1,0 +1,7 @@
+{
+  "mode": "study_guide",
+  "should_warn": true,
+  "should_be_low_confidence": true,
+  "should_not_have_summary": true,
+  "notes": "Completely blank lined paper — no content to build a study guide from. System must not fabricate a guide and should flag low confidence."
+}

@@ -1,0 +1,7 @@
+{
+  "mode": "transcribe",
+  "key_terms": ["speedup", "longest increasing subsequence", "dynamic programming", "subsequence", "states", "decision"],
+  "expected_section_count": 2,
+  "min_recall": 0.6,
+  "notes": "Sparse CS lecture slides on DP speedup and the longest increasing subsequence problem. Content is intentionally minimal (slide format). Min recall lowered to 0.6 to account for sparsity. Not used for study_guide due to insufficient content density."
+}

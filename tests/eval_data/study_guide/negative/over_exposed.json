@@ -1,0 +1,7 @@
+{
+  "mode": "study_guide",
+  "should_warn": true,
+  "should_be_low_confidence": true,
+  "should_not_have_summary": true,
+  "notes": "Overexposed/faint handwritten notes — content is barely visible. System should not attempt to synthesise a study guide from unreadable input."
+}

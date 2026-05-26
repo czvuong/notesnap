@@ -1,0 +1,7 @@
+{
+  "mode": "transcribe",
+  "key_terms": ["convolution", "pooling", "fully connected", "ConvNet", "activation", "ReLU", "filters", "input volume", "architecture"],
+  "expected_section_count": 3,
+  "min_recall": 0.7,
+  "notes": "Clean digital handwriting on iPad about CNN architecture. Well-spaced bullet points covering convolution, pooling, fully connected layers, and typical ConvNet architecture. High quality input."
+}

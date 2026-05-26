@@ -1,0 +1,7 @@
+{
+  "mode": "transcribe",
+  "key_terms": ["assignment 1", "feedback", "frontend", "backend", "database", "API", "receipt", "SQLite", "React"],
+  "expected_section_count": 2,
+  "min_recall": 0.7,
+  "notes": "Typed class meeting notes (Tue 4/14 and Thu 4/16). Dense bullet-point format covering course feedback and web app design. Two date-based sections. Not used for study_guide since it is meeting notes rather than subject matter."
+}

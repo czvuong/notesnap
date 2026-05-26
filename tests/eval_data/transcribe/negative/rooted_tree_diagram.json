@@ -1,0 +1,5 @@
+{
+  "mode": "transcribe",
+  "should_warn": true,
+  "notes": "Digital diagram of a rooted tree with overlapping colored arrows (blue, red, green) and sparse handwritten annotations. Primarily a visual diagram — not extractable as structured text notes. System should warn about diagram content. Low confidence is NOT required since this is still academic material."
+}

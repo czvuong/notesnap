@@ -1,0 +1,7 @@
+{
+  "mode": "transcribe",
+  "key_terms": ["Players", "Analysis", "Dominant", "Servient", "Affirmative", "Negative", "express", "implied", "estoppel", "prescription", "implication"],
+  "expected_section_count": 3,
+  "min_recall": 0.7,
+  "notes": "Whiteboard photo with three columns: Players, Analysis, How Created. Law notes on easements. Clear structure and legible marker writing despite slight shadow from lighting."
+}

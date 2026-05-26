@@ -1,0 +1,8 @@
+{
+  "_comment": "Rename to match your image. Use any combination of the fields below.",
+  "mode": "study_guide",
+  "should_warn": true,
+  "should_be_low_confidence": true,
+  "should_not_have_summary": true,
+  "notes": "Invalid/unreadable input — should not produce a polished study guide. Passes if confidence is low/medium or warnings are present, and no summary section is generated."
+}

@@ -1,0 +1,6 @@
+{
+  "mode": "transcribe",
+  "min_recall_threshold": 0.7,
+  "output_file": "eval/last_run_transcribe.json",
+  "_comment": "Run with: python eval/run_eval.py --mode transcribe"
+}

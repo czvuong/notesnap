@@ -1,0 +1,9 @@
+{
+  "_comment": "Rename to match your image. Use any combination of the fields below.",
+  "mode": "transcribe",
+  "should_warn": true,
+  "should_be_low_confidence": true,
+  "key_terms": ["RC", "ES", "burden"],
+  "max_key_terms": 1,
+  "notes": "Blurry/blank/non-note image — should flag low confidence or warnings, not hallucinate content."
+}

@@ -1,0 +1,8 @@
+{
+  "mode": "study_guide",
+  "key_concepts": ["convolution", "pooling", "fully connected layer", "ConvNet architecture", "ReLU", "filters"],
+  "should_have_summary": true,
+  "should_explain_terms": ["convolution", "pooling", "fully connected"],
+  "min_recall": 0.7,
+  "notes": "Clean iPad notes on CNN architecture with clear bullet structure. Should produce a study guide explaining each layer type and its role, with a summary of typical ConvNet design patterns."
+}

@@ -1,0 +1,7 @@
+{
+  "mode": "transcribe",
+  "key_terms": ["nearest neighbor", "Bayes rule", "generative model", "KL-divergence", "cross validation", "class priors", "Gaussian"],
+  "expected_section_count": 4,
+  "min_recall": 0.7,
+  "notes": "Clean handwritten ML notes with highlighted section headers. Covers kNN, distances, generative modeling, and Gaussian classifiers. High quality input — should produce confident extraction."
+}

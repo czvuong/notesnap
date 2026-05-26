@@ -1,0 +1,246 @@
+/* ── Page ─────────────────────────────────────────────────────────────────── */
+.library-page { max-width: 1080px; }
+
+/* ── Toolbar ──────────────────────────────────────────────────────────────── */
+
+/* Row 1: search bar + sort (full width, search fills remaining space) */
+.library-toolbar-row1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+/* Row 2: filter dropdowns */
+.library-toolbar-row2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+/* Search — grows to fill remaining row width */
+.search-wrap {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+/* Scoped to row1 for specificity — beats global .input padding */
+.library-toolbar-row1 .search-icon {
+  position: absolute;
+  left: 10px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-faint);
+  pointer-events: none;
+}
+.library-toolbar-row1 .search-input {
+  width: 100%;
+  padding-left: 36px;
+  padding-right: 36px;
+}
+.library-toolbar-row1 .search-clear {
+  position: absolute;
+  right: 4px; top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Sort — fixed width, sits right of search, no overlapping icon */
+/* Needs double-class specificity (0,2,0) to beat global .select { width:100% } */
+.library-toolbar-row1 .sort-select {
+  width: auto;
+  min-width: 130px;
+  max-width: 180px;
+  flex: 0 0 auto;
+}
+
+/* Filter dropdowns — side by side, not full-width */
+.library-toolbar-row2 .select {
+  width: auto;           /* override global width:100% */
+}
+.filter-select {
+  min-width: 130px;
+  max-width: 200px;
+}
+
+/* ── Tag filter row ───────────────────────────────────────────────────────── */
+.tag-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.tag-filter-chip {
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: border-color var(--transition), background var(--transition);
+  font-size: 0.75rem;
+}
+.tag-filter-chip:hover {
+  border-color: var(--color-primary-light);
+  background: var(--color-primary-xlight);
+}
+.tag-filter-chip.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-xlight);
+  color: var(--color-primary);
+}
+
+/* ── Filter summary ───────────────────────────────────────────────────────── */
+.filter-summary { margin-bottom: 16px; }
+
+/* ── Notes grid ───────────────────────────────────────────────────────────── */
+.notes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+/* ── Note card ────────────────────────────────────────────────────────────── */
+.note-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-decoration: none;
+  color: var(--color-text);
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+.note-card:hover {
+  border-color: var(--color-primary-light);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.note-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.note-card-icon {
+  width: 34px; height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-xlight);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.note-card-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.35;
+  /* clamp to 2 lines */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.note-card-course {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.note-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+}
+.note-card-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--color-text-faint);
+}
+
+.note-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+.library-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 80px 24px;
+  color: var(--color-text-muted);
+}
+
+.library-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 80px 24px;
+  text-align: center;
+}
+.library-empty-icon {
+  width: 64px; height: 64px;
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-raised);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--color-text-faint);
+  margin-bottom: 8px;
+}
+.library-empty-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* ── Pagination ───────────────────────────────────────────────────────────── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding-top: 8px;
+}
+.pagination-page {
+  min-width: 32px;
+}
+.pagination-page.active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+.pagination-ellipsis {
+  padding: 0 4px;
+  color: var(--color-text-faint);
+  font-size: 0.875rem;
+}
+
+/* ── Modal (reused from NoteEditor) ──────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+.modal {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  width: 400px; max-width: calc(100vw - 32px);
+  box-shadow: var(--shadow-lg);
+  border: 1.5px solid var(--color-border);
+}
+.modal-header { display: flex; align-items: center; gap: 10px; }
+.modal-header h3 { font-size: 1rem; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }

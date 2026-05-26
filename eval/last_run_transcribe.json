@@ -1,0 +1,517 @@
+[
+  {
+    "file": "class_meeting_notes.pdf",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "positive",
+    "title": "Receipt Scanning App Design Feedback and Implementation Notes",
+    "sections": 4,
+    "confidence": "high",
+    "warnings": [],
+    "elapsed": "23.6s",
+    "eval": {
+      "checks": {
+        "key_term_recall": true
+      },
+      "detail": {
+        "key_term_recall": 0.8888888888888888,
+        "found_terms": [
+          "feedback",
+          "frontend",
+          "backend",
+          "database",
+          "api",
+          "receipt",
+          "sqlite",
+          "react"
+        ],
+        "missing_terms": [
+          "assignment 1"
+        ],
+        "min_recall": 0.7,
+        "actual_sections": 4,
+        "expected_sections": 2
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "dsc200_cheatsheet.jpeg",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "positive",
+    "title": "OSC 200 Midterm CheatSheet",
+    "sections": 3,
+    "confidence": "medium",
+    "warnings": [
+      "Several transcribed items appear garbled or incomplete due to illegible handwriting."
+    ],
+    "elapsed": "16.1s",
+    "eval": {
+      "checks": {
+        "key_term_recall": true
+      },
+      "detail": {
+        "key_term_recall": 0.8888888888888888,
+        "found_terms": [
+          "strings",
+          "dictionaries",
+          "regular expressions",
+          "numpy",
+          "broadcasting",
+          "seaborn",
+          "lambda",
+          "subplots"
+        ],
+        "missing_terms": [
+          "matplotlib"
+        ],
+        "min_recall": 0.65
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "ipad_cnn_notes.jpeg",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "positive",
+    "title": "Key Concepts of Convolutional Neural Networks",
+    "sections": 5,
+    "confidence": "high",
+    "warnings": [],
+    "elapsed": "11.1s",
+    "eval": {
+      "checks": {
+        "key_term_recall": true
+      },
+      "detail": {
+        "key_term_recall": 1.0,
+        "found_terms": [
+          "convolution",
+          "pooling",
+          "fully connected",
+          "convnet",
+          "activation",
+          "relu",
+          "filters",
+          "input volume",
+          "architecture"
+        ],
+        "missing_terms": [],
+        "min_recall": 0.7,
+        "actual_sections": 5,
+        "expected_sections": 3
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "ml_notes_contrastive_word2vec.pdf",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "positive",
+    "title": "Notes on Latent Spaces, Contrastive Learning, Word Embeddings, SimCLR, and CLIP",
+    "sections": 11,
+    "confidence": "high",
+    "warnings": [],
+    "elapsed": "32.9s",
+    "eval": {
+      "checks": {
+        "key_term_recall": true
+      },
+      "detail": {
+        "key_term_recall": 1.0,
+        "found_terms": [
+          "contrastive learning",
+          "word embeddings",
+          "pmi",
+          "word2vec",
+          "simclr",
+          "similar pairs",
+          "dissimilar pairs",
+          "distributional hypothesis"
+        ],
+        "missing_terms": [],
+        "min_recall": 0.7,
+        "actual_sections": 11,
+        "expected_sections": 3
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "ml_notes_knn_generative.pdf",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "positive",
+    "title": "Machine Learning Classifier Overview and Models",
+    "sections": 12,
+    "confidence": "medium",
+    "warnings": [
+      "Several words and equations are partially illegible or garbled (marked as [illegible])",
+      "Formatting of some mathematical expressions may be incomplete"
+    ],
+    "elapsed": "26.3s",
+    "eval": {
+      "checks": {
+        "key_term_recall": true
+      },
+      "detail": {
+        "key_term_recall": 0.7142857142857143,
+        "found_terms": [
+          "nearest neighbor",
+          "bayes rule",
+          "generative model",
+          "class priors",
+          "gaussian"
+        ],
+        "missing_terms": [
+          "kl-divergence",
+          "cross validation"
+        ],
+        "min_recall": 0.7,
+        "actual_sections": 12,
+        "expected_sections": 4
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "quiz_ml_cheatsheet.jpeg",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "positive",
+    "title": "Quiz 2 Notes on Spectral Embeddings, Autoencoders, and Probabilistic Models",
+    "sections": 8,
+    "confidence": "medium",
+    "warnings": [
+      "Several mathematical expressions appear garbled or ambiguous; transcription may contain errors."
+    ],
+    "elapsed": "37.2s",
+    "eval": {
+      "checks": {
+        "key_term_recall": true
+      },
+      "detail": {
+        "key_term_recall": 0.9,
+        "found_terms": [
+          "spectral embeddings",
+          "probability distributions",
+          "gaussian",
+          "multivariate",
+          "autoencoder",
+          "mle",
+          "normal",
+          "poisson",
+          "binomial"
+        ],
+        "missing_terms": [
+          "kl-divergence"
+        ],
+        "min_recall": 0.6
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "scratch_paper.jpeg",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "positive",
+    "title": "Collected Equations and Placeholder Expressions",
+    "sections": 12,
+    "confidence": "medium",
+    "warnings": [
+      "Many repeated placeholder lines; visual structure may not be fully captured."
+    ],
+    "elapsed": "38.1s",
+    "eval": {
+      "checks": {
+        "key_term_recall": true
+      },
+      "detail": {
+        "key_term_recall": 1.0,
+        "found_terms": [
+          "partial",
+          "2x"
+        ],
+        "missing_terms": [],
+        "min_recall": 0.7
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "slides_dp_lis.pdf",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "positive",
+    "title": "Longest Increasing Subsequence DP Optimization with Segment Tree",
+    "sections": 6,
+    "confidence": "medium",
+    "warnings": [
+      "Several lines appear garbled or unrelated (e.g., \"Ta x i m i s e\", \"Fullparticipate\", \"Aca lAcidthenty\", etc.)"
+    ],
+    "elapsed": "21.7s",
+    "eval": {
+      "checks": {
+        "key_term_recall": true
+      },
+      "detail": {
+        "key_term_recall": 0.6666666666666666,
+        "found_terms": [
+          "longest increasing subsequence",
+          "subsequence",
+          "states",
+          "decision"
+        ],
+        "missing_terms": [
+          "speedup",
+          "dynamic programming"
+        ],
+        "min_recall": 0.6,
+        "actual_sections": 6,
+        "expected_sections": 2
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "slides_kernel_trick.pdf",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "positive",
+    "title": "Kernel Trick and Perceptron/SVM Formulations",
+    "sections": 6,
+    "confidence": "high",
+    "warnings": [],
+    "elapsed": "23.5s",
+    "eval": {
+      "checks": {
+        "key_term_recall": true
+      },
+      "detail": {
+        "key_term_recall": 0.8333333333333334,
+        "found_terms": [
+          "perceptron",
+          "kernel trick",
+          "basis expansion",
+          "dual form",
+          "dot products"
+        ],
+        "missing_terms": [
+          "feature space"
+        ],
+        "min_recall": 0.7,
+        "actual_sections": 6,
+        "expected_sections": 3
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "whiteboard_law.jpeg",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "positive",
+    "title": "Table of Property Rights Analysis",
+    "sections": 3,
+    "confidence": "high",
+    "warnings": [],
+    "elapsed": "10.4s",
+    "eval": {
+      "checks": {
+        "key_term_recall": true
+      },
+      "detail": {
+        "key_term_recall": 0.9090909090909091,
+        "found_terms": [
+          "players",
+          "analysis",
+          "dominant",
+          "servient",
+          "affirmative",
+          "negative",
+          "express",
+          "estoppel",
+          "prescription",
+          "implication"
+        ],
+        "missing_terms": [
+          "implied"
+        ],
+        "min_recall": 0.7,
+        "actual_sections": 3,
+        "expected_sections": 3
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "blank.jpeg",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "negative",
+    "title": "Untitled Notes",
+    "sections": 1,
+    "confidence": "low",
+    "warnings": [
+      "AI returned unparseable response: Unterminated string starting at: line 41 column 18 (char 1018)"
+    ],
+    "elapsed": "73.9s",
+    "eval": {
+      "checks": {
+        "should_warn": true,
+        "should_be_low_confidence": true
+      },
+      "detail": {
+        "warnings": [
+          "AI returned unparseable response: Unterminated string starting at: line 41 column 18 (char 1018)"
+        ],
+        "confidence": "low"
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "far_lecture.jpeg",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "negative",
+    "title": "Maximum Likelihood Estimation Notes",
+    "sections": 10,
+    "confidence": "medium",
+    "warnings": [
+      "Some phrasing appears incomplete or ambiguous (e.g., \"denominator is a rather than $n-2$\")"
+    ],
+    "elapsed": "17.8s",
+    "eval": {
+      "checks": {
+        "should_warn": true
+      },
+      "detail": {
+        "warnings": [
+          "Some phrasing appears incomplete or ambiguous (e.g., \"denominator is a rather than $n-2$\")"
+        ]
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "outdoor_seating.jpeg",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "negative",
+    "title": "",
+    "sections": 1,
+    "confidence": "low",
+    "warnings": [
+      "The image is not academic content."
+    ],
+    "elapsed": "17.5s",
+    "eval": {
+      "checks": {
+        "should_warn": true,
+        "should_be_low_confidence": true
+      },
+      "detail": {
+        "warnings": [
+          "The image is not academic content."
+        ],
+        "confidence": "low"
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "over_exposed.jpeg",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "negative",
+    "title": "Document with Sections, Lists, and Visual Elements",
+    "sections": 42,
+    "confidence": "high",
+    "warnings": [
+      "More than 20 sections in a single image \u2013 likely indicates extraction noise or hallucination",
+      "Content repeats multiple times"
+    ],
+    "elapsed": "49.2s",
+    "eval": {
+      "checks": {
+        "should_warn": true,
+        "should_be_low_confidence": false
+      },
+      "detail": {
+        "warnings": [
+          "More than 20 sections in a single image \u2013 likely indicates extraction noise or hallucination",
+          "Content repeats multiple times"
+        ],
+        "confidence": "high"
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "rooted_tree_diagram.png",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "negative",
+    "title": "Rooted Tree Height Example with Decisions and Complexity",
+    "sections": 2,
+    "confidence": "high",
+    "warnings": [],
+    "elapsed": "8.6s",
+    "eval": {
+      "checks": {
+        "should_warn": false
+      },
+      "detail": {
+        "warnings": []
+      },
+      "passed": false
+    },
+    "pass": false
+  },
+  {
+    "file": "rotated_vae.jpeg",
+    "status": "OK",
+    "mode": "transcribe",
+    "set": "negative",
+    "title": "",
+    "sections": 1,
+    "confidence": "low",
+    "warnings": [
+      "Image contains only placeholder text and numeric tables, not academic content."
+    ],
+    "elapsed": "17.1s",
+    "eval": {
+      "checks": {
+        "should_warn": true,
+        "should_be_low_confidence": true
+      },
+      "detail": {
+        "warnings": [
+          "Image contains only placeholder text and numeric tables, not academic content."
+        ],
+        "confidence": "low"
+      },
+      "passed": true
+    },
+    "pass": true
+  }
+]

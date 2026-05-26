@@ -1,0 +1,227 @@
+/* ── Page ─────────────────────────────────────────────────────────────────── */
+.dashboard-page { max-width: 960px; }
+
+/* ── Stat grid ────────────────────────────────────────────────────────────── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  text-decoration: none;
+  color: var(--color-text);
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+.stat-card:hover {
+  border-color: var(--color-primary-light);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.stat-card--cta {
+  border-color: var(--color-primary-light);
+  background: var(--color-primary-xlight);
+}
+.stat-card--cta:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-xlight);
+}
+
+.stat-card-icon {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-xlight);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+.stat-card--cta .stat-card-icon {
+  background: var(--color-primary-light);
+}
+
+.stat-card-body { flex: 1; min-width: 0; }
+.stat-card-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin-bottom: 3px;
+}
+.stat-card-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.1;
+}
+.stat-card-sub {
+  font-size: 0.75rem;
+  color: var(--color-text-faint);
+  margin-top: 2px;
+}
+.stat-card-cta-text {
+  font-size: 0.8125rem;
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.stat-card-arrow {
+  color: var(--color-primary);
+  opacity: .7;
+}
+
+/* ── Sections ─────────────────────────────────────────────────────────────── */
+.dash-section { margin-bottom: 32px; }
+
+.dash-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.dash-section-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text-muted);
+}
+.dash-section-title h2 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dash-loading {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}
+
+.dash-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px;
+  text-align: center;
+  border: 1.5px dashed var(--color-border);
+  border-radius: var(--radius-xl);
+}
+
+/* ── Recent notes grid ────────────────────────────────────────────────────── */
+.recent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.recent-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-decoration: none;
+  color: var(--color-text);
+  transition: border-color var(--transition), transform var(--transition);
+}
+.recent-card:hover {
+  border-color: var(--color-primary-light);
+  transform: translateY(-1px);
+}
+
+.recent-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.recent-card-date {
+  font-size: 0.7rem;
+  color: var(--color-text-faint);
+}
+.recent-card-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.recent-card-course {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--color-text-faint);
+  margin-top: auto;
+}
+
+/* ── Course list ──────────────────────────────────────────────────────────── */
+.course-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.course-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-decoration: none;
+  color: var(--color-text);
+  transition: border-color var(--transition), transform var(--transition);
+}
+.course-row:hover {
+  border-color: var(--color-primary-light);
+  transform: translateX(2px);
+}
+
+.course-row-icon {
+  width: 30px; height: 30px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-xlight);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+.course-row-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.course-row-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.course-row-term {
+  font-size: 0.75rem;
+  color: var(--color-text-faint);
+}
+.course-row-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.course-row-arrow {
+  color: var(--color-text-faint);
+  transition: transform var(--transition);
+}
+.course-row:hover .course-row-arrow {
+  transform: translateX(3px);
+}

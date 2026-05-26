@@ -1,0 +1,372 @@
+[
+  {
+    "file": "ipad_cnn_notes.jpeg",
+    "status": "OK",
+    "mode": "study_guide",
+    "set": "positive",
+    "title": "Key Concepts in Convolutional Neural Network Layers",
+    "sections": 7,
+    "confidence": "high",
+    "warnings": [],
+    "elapsed": "12.5s",
+    "eval": {
+      "checks": {
+        "key_concept_recall": true,
+        "should_have_summary": true,
+        "should_explain_terms": true
+      },
+      "detail": {
+        "key_concept_recall": 1.0,
+        "found_concepts": [
+          "convolution",
+          "pooling",
+          "fully connected layer",
+          "convnet architecture",
+          "relu",
+          "filters"
+        ],
+        "missing_concepts": [],
+        "min_recall": 0.7,
+        "has_summary": true,
+        "explained_terms": [
+          "convolution",
+          "pooling",
+          "fully connected"
+        ],
+        "unexplained_terms": [],
+        "explain_note": "Heuristic: term must appear within 300 chars of an explanation phrase (e.g. 'means', 'refers to', 'is defined as')."
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "ml_notes_contrastive_word2vec.pdf",
+    "status": "OK",
+    "mode": "study_guide",
+    "set": "positive",
+    "title": "Latent Spaces, Contrastive Learning, Word Embeddings, SimCLR, and CLIP",
+    "sections": 9,
+    "confidence": "medium",
+    "warnings": [
+      "Missing spaces and minor illegible characters in the source text"
+    ],
+    "elapsed": "18.5s",
+    "eval": {
+      "checks": {
+        "key_concept_recall": true,
+        "should_have_summary": false,
+        "should_explain_terms": false
+      },
+      "detail": {
+        "key_concept_recall": 1.0,
+        "found_concepts": [
+          "contrastive learning",
+          "pmi matrix",
+          "word2vec",
+          "simclr",
+          "distributional hypothesis"
+        ],
+        "missing_concepts": [],
+        "min_recall": 0.7,
+        "has_summary": false,
+        "explained_terms": [
+          "PMI",
+          "Word2Vec"
+        ],
+        "unexplained_terms": [
+          "contrastive learning"
+        ],
+        "explain_note": "Heuristic: term must appear within 300 chars of an explanation phrase (e.g. 'means', 'refers to', 'is defined as')."
+      },
+      "passed": false
+    },
+    "pass": false
+  },
+  {
+    "file": "ml_notes_knn_generative.pdf",
+    "status": "OK",
+    "mode": "study_guide",
+    "set": "positive",
+    "title": "Overview of Classifier Learning Methods and Common Models",
+    "sections": 15,
+    "confidence": "high",
+    "warnings": [
+      "Some symbols and equations are partially garbled"
+    ],
+    "elapsed": "26.3s",
+    "eval": {
+      "checks": {
+        "key_concept_recall": true,
+        "should_have_summary": true,
+        "should_explain_terms": true
+      },
+      "detail": {
+        "key_concept_recall": 1.0,
+        "found_concepts": [
+          "nearest neighbor",
+          "bayes rule",
+          "generative",
+          "discriminative",
+          "curse of dimensionality"
+        ],
+        "missing_concepts": [],
+        "min_recall": 0.7,
+        "has_summary": true,
+        "explained_terms": [
+          "nearest neighbor",
+          "Bayes rule",
+          "generative model"
+        ],
+        "unexplained_terms": [],
+        "explain_note": "Heuristic: term must appear within 300 chars of an explanation phrase (e.g. 'means', 'refers to', 'is defined as')."
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "slides_kernel_trick.pdf",
+    "status": "OK",
+    "mode": "study_guide",
+    "set": "positive",
+    "title": "Kernel Trick for Perceptron and SVM with Basis Expansion",
+    "sections": 9,
+    "confidence": "high",
+    "warnings": [],
+    "elapsed": "14.6s",
+    "eval": {
+      "checks": {
+        "key_concept_recall": true,
+        "should_have_summary": true,
+        "should_explain_terms": true
+      },
+      "detail": {
+        "key_concept_recall": 1.0,
+        "found_concepts": [
+          "kernel trick",
+          "basis expansion",
+          "dual representation",
+          "feature space",
+          "dot products"
+        ],
+        "missing_concepts": [],
+        "min_recall": 0.7,
+        "has_summary": true,
+        "explained_terms": [
+          "kernel trick",
+          "dual form"
+        ],
+        "unexplained_terms": [],
+        "explain_note": "Heuristic: term must appear within 300 chars of an explanation phrase (e.g. 'means', 'refers to', 'is defined as')."
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "whiteboard_law.jpeg",
+    "status": "OK",
+    "mode": "study_guide",
+    "set": "positive",
+    "title": "Classification of Property Interests: Players, Analysis, and Creation Methods",
+    "sections": 4,
+    "confidence": "high",
+    "warnings": [],
+    "elapsed": "9.9s",
+    "eval": {
+      "checks": {
+        "key_concept_recall": true,
+        "should_have_summary": true,
+        "should_explain_terms": true
+      },
+      "detail": {
+        "key_concept_recall": 1.0,
+        "found_concepts": [
+          "dominant",
+          "servient",
+          "affirmative",
+          "negative",
+          "express",
+          "estoppel",
+          "prescription"
+        ],
+        "missing_concepts": [],
+        "min_recall": 0.7,
+        "has_summary": true,
+        "explained_terms": [
+          "dominant",
+          "servient",
+          "estoppel",
+          "prescription"
+        ],
+        "unexplained_terms": [],
+        "explain_note": "Heuristic: term must appear within 300 chars of an explanation phrase (e.g. 'means', 'refers to', 'is defined as')."
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "blank.jpeg",
+    "status": "OK",
+    "mode": "study_guide",
+    "set": "negative",
+    "title": "",
+    "sections": 1,
+    "confidence": "low",
+    "warnings": [
+      "Content consists only of repeated headings and timestamps with no substantive academic material"
+    ],
+    "elapsed": "16.6s",
+    "eval": {
+      "checks": {
+        "should_warn": true,
+        "should_be_low_confidence": true,
+        "should_not_have_summary": true
+      },
+      "detail": {
+        "warnings": [
+          "Content consists only of repeated headings and timestamps with no substantive academic material"
+        ],
+        "confidence": "low",
+        "has_summary": false
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "far_lecture.jpeg",
+    "status": "OK",
+    "mode": "study_guide",
+    "set": "negative",
+    "title": "Maximum Likelihood Estimation Derivation",
+    "sections": 5,
+    "confidence": "medium",
+    "warnings": [],
+    "elapsed": "11.0s",
+    "eval": {
+      "checks": {
+        "should_warn": false,
+        "should_be_low_confidence": false,
+        "should_not_have_summary": true
+      },
+      "detail": {
+        "warnings": [],
+        "confidence": "medium",
+        "has_summary": false
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "outdoor_seating.jpeg",
+    "status": "OK",
+    "mode": "study_guide",
+    "set": "negative",
+    "title": "",
+    "sections": 1,
+    "confidence": "low",
+    "warnings": [
+      "No readable academic text in the image"
+    ],
+    "elapsed": "17.5s",
+    "eval": {
+      "checks": {
+        "should_warn": true,
+        "should_be_low_confidence": true,
+        "should_not_have_summary": true
+      },
+      "detail": {
+        "warnings": [
+          "No readable academic text in the image"
+        ],
+        "confidence": "low",
+        "has_summary": false
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "over_exposed.jpeg",
+    "status": "OK",
+    "mode": "study_guide",
+    "set": "negative",
+    "title": "Overview of Quantum Computing Research",
+    "sections": 18,
+    "confidence": "high",
+    "warnings": [],
+    "elapsed": "29.7s",
+    "eval": {
+      "checks": {
+        "should_warn": false,
+        "should_be_low_confidence": false,
+        "should_not_have_summary": false
+      },
+      "detail": {
+        "warnings": [],
+        "confidence": "high",
+        "has_summary": true
+      },
+      "passed": false
+    },
+    "pass": false
+  },
+  {
+    "file": "rooted_tree_diagram.png",
+    "status": "OK",
+    "mode": "study_guide",
+    "set": "negative",
+    "title": "Rooted Tree Height Example and Complexity Analysis",
+    "sections": 4,
+    "confidence": "high",
+    "warnings": [],
+    "elapsed": "9.5s",
+    "eval": {
+      "checks": {
+        "should_warn": false,
+        "should_be_low_confidence": false,
+        "should_not_have_summary": true
+      },
+      "detail": {
+        "warnings": [],
+        "confidence": "high",
+        "has_summary": false
+      },
+      "passed": true
+    },
+    "pass": true
+  },
+  {
+    "file": "rotated_vae.jpeg",
+    "status": "OK",
+    "mode": "study_guide",
+    "set": "negative",
+    "title": "",
+    "sections": 1,
+    "confidence": "low",
+    "warnings": [
+      "Extracted text is garbled and contains no coherent academic content."
+    ],
+    "elapsed": "17.4s",
+    "eval": {
+      "checks": {
+        "should_warn": true,
+        "should_be_low_confidence": true,
+        "should_not_have_summary": true
+      },
+      "detail": {
+        "warnings": [
+          "Extracted text is garbled and contains no coherent academic content."
+        ],
+        "confidence": "low",
+        "has_summary": false
+      },
+      "passed": true
+    },
+    "pass": true
+  }
+]

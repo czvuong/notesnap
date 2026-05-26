@@ -1,0 +1,6 @@
+{
+  "mode": "transcribe",
+  "should_warn": true,
+  "should_be_low_confidence": true,
+  "notes": "Handwritten notes photographed sideways/rotated 90 degrees and partially cut off. Orientation makes reliable extraction very difficult. System should warn or flag low confidence rather than hallucinate structure."
+}

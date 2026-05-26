@@ -1,0 +1,6 @@
+{
+  "mode": "transcribe",
+  "should_warn": true,
+  "should_be_low_confidence": true,
+  "notes": "Outdoor photo of chairs and tables outside a building — not notes or academic content at all. System should recognise this is not a note and flag accordingly."
+}

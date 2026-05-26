@@ -1,0 +1,7 @@
+{
+  "mode": "study_guide",
+  "should_warn": true,
+  "should_be_low_confidence": true,
+  "should_not_have_summary": true,
+  "notes": "Sideways/rotated handwritten notes, partially cut off. Orientation and cropping make this unsuitable for study guide generation — system should warn rather than produce a confident output."
+}
