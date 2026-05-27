@@ -10,6 +10,7 @@
     "lint": "eslint src --ext .js,.jsx"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.8",
     "katex": "^0.16.45",
     "lucide-react": "^0.400.0",
     "react": "^18.3.1",

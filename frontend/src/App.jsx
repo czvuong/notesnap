@@ -9,8 +9,12 @@ import {
   Plug,
   BookMarked,
   Layers,
+  LogOut,
 } from 'lucide-react'
+import { SignedIn, SignedOut, RedirectToSignIn, useAuth, useUser, UserButton } from '@clerk/clerk-react'
+import { useEffect } from 'react'
 import { useTheme } from './hooks/useTheme.js'
+import { setTokenGetter } from './api.js'
 import Dashboard    from './pages/Dashboard.jsx'
 import UploadPage   from './pages/Upload.jsx'
 import BatchUpload  from './pages/BatchUpload.jsx'
@@ -23,30 +27,55 @@ import TrashPage    from './pages/Trash.jsx'
 import Preferences  from './pages/Preferences.jsx'
 import './App.css'
 
+/**
+ * Syncs the Clerk token getter into our api.js module so every request
+ * automatically gets an Authorization header. Renders nothing.
+ */
+function AuthTokenSyncer() {
+  const { getToken } = useAuth()
+  useEffect(() => {
+    setTokenGetter(() => getToken())
+    return () => setTokenGetter(null)
+  }, [getToken])
+  return null
+}
+
 export default function App() {
   // Initialise theme on mount — reads localStorage and sets data-theme on <html>
   useTheme()
 
   return (
     <BrowserRouter>
-      <div className="app-layout">
-        <Sidebar />
-        <main className="app-main">
-          <Routes>
-            <Route path="/"              element={<Dashboard />}  />
-            <Route path="/upload"        element={<UploadPage />} />
-            <Route path="/batch"         element={<BatchUpload />} />
-            <Route path="/notes/:id"     element={<NoteEditor />} />
-            <Route path="/notes/:id/study" element={<StudyTools />} />
-            <Route path="/study"         element={<StudyHub />}   />
-            <Route path="/library"       element={<Library />}    />
-            <Route path="/courses/:id"   element={<CourseDetail />} />
-            <Route path="/trash"         element={<TrashPage />}  />
-            <Route path="/settings"      element={<Preferences />} />
-            <Route path="*"              element={<NotFound />}   />
-          </Routes>
-        </main>
-      </div>
+      {/* Always sync the Clerk token into api.js when signed in */}
+      <SignedIn>
+        <AuthTokenSyncer />
+      </SignedIn>
+
+      {/* Redirect to Clerk's hosted sign-in page if not authenticated */}
+      <SignedOut>
+        <RedirectToSignIn />
+      </SignedOut>
+
+      <SignedIn>
+        <div className="app-layout">
+          <Sidebar />
+          <main className="app-main">
+            <Routes>
+              <Route path="/"              element={<Dashboard />}  />
+              <Route path="/upload"        element={<UploadPage />} />
+              <Route path="/batch"         element={<BatchUpload />} />
+              <Route path="/notes/:id"     element={<NoteEditor />} />
+              <Route path="/notes/:id/study" element={<StudyTools />} />
+              <Route path="/study"         element={<StudyHub />}   />
+              <Route path="/library"       element={<Library />}    />
+              <Route path="/courses/:id"   element={<CourseDetail />} />
+              <Route path="/trash"         element={<TrashPage />}  />
+              <Route path="/settings"      element={<Preferences />} />
+              <Route path="*"              element={<NotFound />}   />
+            </Routes>
+          </main>
+        </div>
+      </SignedIn>
     </BrowserRouter>
   )
 }
@@ -100,6 +129,10 @@ function Sidebar() {
           <Plug size={14} className="sidebar-link-icon" />
           <span>API Docs</span>
         </a>
+        {/* Clerk user avatar + sign-out dropdown */}
+        <div style={{ paddingTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <UserButton afterSignOutUrl="/" />
+        </div>
       </div>
     </aside>
   )

@@ -14,6 +14,17 @@
 // In production, set VITE_API_BASE in your .env to the deployed server URL
 const BASE = import.meta.env.VITE_API_BASE ?? ''
 
+// ── Auth token injection ───────────────────────────────────────────────────────
+// App.jsx calls setTokenGetter() once the Clerk session is ready.
+// Every request then attaches Authorization: Bearer <token> automatically.
+
+let _getToken = null
+
+/** Called by AuthTokenSyncer in App.jsx to wire up Clerk's getToken. */
+export function setTokenGetter(fn) {
+  _getToken = fn
+}
+
 // ── Error class ───────────────────────────────────────────────────────────────
 
 export class ApiError extends Error {
@@ -29,6 +40,16 @@ export class ApiError extends Error {
 async function request(method, path, body = null, isFormData = false) {
   const headers = {}
   if (body && !isFormData) headers['Content-Type'] = 'application/json'
+
+  // Attach Clerk Bearer token if available
+  if (_getToken) {
+    try {
+      const token = await _getToken()
+      if (token) headers['Authorization'] = `Bearer ${token}`
+    } catch {
+      // If token fetch fails, continue unauthenticated (backend will return 401)
+    }
+  }
 
   const res = await fetch(`${BASE}${path}`, {
     method,
@@ -92,8 +113,17 @@ export async function batchExtract(files, mode, courseId, callbacks) {
   form.append('mode', mode)
   if (courseId) form.append('course_id', courseId)
 
+  const batchHeaders = {}
+  if (_getToken) {
+    try {
+      const token = await _getToken()
+      if (token) batchHeaders['Authorization'] = `Bearer ${token}`
+    } catch { /* continue without token */ }
+  }
+
   const res = await fetch(`${BASE}/api/extract/batch`, {
     method: 'POST',
+    headers: batchHeaders,
     body: form,
   })
 
@@ -285,7 +315,16 @@ export function listTags()                     { return get('/api/tags') }
 export async function uploadSectionImage(file) {
   const form = new FormData()
   form.append('file', file)
-  const res = await fetch(`${BASE}/api/images/upload`, { method: 'POST', body: form })
+
+  const imgHeaders = {}
+  if (_getToken) {
+    try {
+      const token = await _getToken()
+      if (token) imgHeaders['Authorization'] = `Bearer ${token}`
+    } catch { /* continue */ }
+  }
+
+  const res = await fetch(`${BASE}/api/images/upload`, { method: 'POST', headers: imgHeaders, body: form })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }))
     throw new ApiError(res.status, err.detail ?? 'Image upload failed')
