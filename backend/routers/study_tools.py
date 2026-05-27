@@ -1,6 +1,8 @@
 """
 routers/study_tools.py — /api/notes/{id}/flashcards, practice-questions, summary,
                           /api/study-session/generate (multi-note ephemeral sessions)
+
+All routes require authentication and are scoped to the current user.
 """
 
 from datetime import datetime, timezone
@@ -11,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from auth import get_current_user
 from database import get_db
 from extraction import (
     generate_course_summary,
@@ -37,14 +40,15 @@ router = APIRouter(tags=["study-tools"])
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _get_note(db: Session, note_id: str) -> Note:
-    note = db.query(Note).filter(Note.id == note_id, Note.deleted_at == None).first()
+def _get_note(db: Session, note_id: str, user_id: str) -> Note:
+    note = db.query(Note).filter(
+        Note.id == note_id, Note.deleted_at == None, Note.user_id == user_id
+    ).first()
     if not note:
         raise HTTPException(status_code=404, detail="Note not found.")
     return note
 
 def _sections_text(note: Note) -> str:
-    """Concatenate a note's active sections into a single string for AI input."""
     parts = []
     for s in sorted(note.sections, key=lambda x: x.section_order):
         if s.deleted_at is not None:
@@ -57,9 +61,12 @@ def _sections_text(note: Note) -> str:
 # ── Flashcards ────────────────────────────────────────────────────────────────
 
 @router.post("/api/notes/{note_id}/flashcards/generate", response_model=list[FlashcardOut])
-def generate_flashcards(note_id: str, db: Session = Depends(get_db)):
-    """Generate and persist flashcards for a note using its section content."""
-    note = _get_note(db, note_id)
+def generate_flashcards(
+    note_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    note = _get_note(db, note_id, current_user)
     text = _sections_text(note)
     if not text.strip():
         raise HTTPException(status_code=422, detail="Note has no content to generate flashcards from.")
@@ -70,24 +77,23 @@ def generate_flashcards(note_id: str, db: Session = Depends(get_db)):
 
     new_cards = []
     for card in cards_data:
-        fc = Flashcard(
-            note_id=note.id,
-            front=card["front"],
-            back=card["back"],
-        )
+        fc = Flashcard(note_id=note.id, front=card["front"], back=card["back"])
         db.add(fc)
         new_cards.append(fc)
 
     db.commit()
     for fc in new_cards:
         db.refresh(fc)
-
     return [_fc_out(fc) for fc in new_cards]
 
 
 @router.get("/api/notes/{note_id}/flashcards", response_model=list[FlashcardOut])
-def list_flashcards(note_id: str, db: Session = Depends(get_db)):
-    _get_note(db, note_id)
+def list_flashcards(
+    note_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    _get_note(db, note_id, current_user)
     cards = db.query(Flashcard).filter(
         Flashcard.note_id == note_id, Flashcard.deleted_at == None
     ).order_by(Flashcard.created_at).all()
@@ -99,11 +105,18 @@ def review_flashcard(
     flashcard_id: str,
     body: FlashcardReviewCreate,
     db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
 ):
-    """Log a flashcard review result (known / partial / missed)."""
-    fc = db.query(Flashcard).filter(
-        Flashcard.id == flashcard_id, Flashcard.deleted_at == None
-    ).first()
+    # Verify ownership via the parent note
+    fc = (
+        db.query(Flashcard)
+        .join(Note, Note.id == Flashcard.note_id)
+        .filter(
+            Flashcard.id == flashcard_id,
+            Flashcard.deleted_at == None,
+            Note.user_id == current_user,
+        ).first()
+    )
     if not fc:
         raise HTTPException(status_code=404, detail="Flashcard not found.")
 
@@ -122,9 +135,12 @@ def review_flashcard(
 # ── Practice questions ────────────────────────────────────────────────────────
 
 @router.post("/api/notes/{note_id}/practice-questions/generate", response_model=list[PracticeQuestionOut])
-def generate_questions(note_id: str, db: Session = Depends(get_db)):
-    """Generate and persist practice questions for a note."""
-    note = _get_note(db, note_id)
+def generate_questions(
+    note_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    note = _get_note(db, note_id, current_user)
     text = _sections_text(note)
     if not text.strip():
         raise HTTPException(status_code=422, detail="Note has no content to generate questions from.")
@@ -148,13 +164,16 @@ def generate_questions(note_id: str, db: Session = Depends(get_db)):
     db.commit()
     for pq in new_qs:
         db.refresh(pq)
-
     return [_pq_out(pq) for pq in new_qs]
 
 
 @router.get("/api/notes/{note_id}/practice-questions", response_model=list[PracticeQuestionOut])
-def list_questions(note_id: str, db: Session = Depends(get_db)):
-    _get_note(db, note_id)
+def list_questions(
+    note_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    _get_note(db, note_id, current_user)
     qs = db.query(PracticeQuestion).filter(
         PracticeQuestion.note_id == note_id, PracticeQuestion.deleted_at == None
     ).order_by(PracticeQuestion.created_at).all()
@@ -164,16 +183,19 @@ def list_questions(note_id: str, db: Session = Depends(get_db)):
 # ── Course summary ────────────────────────────────────────────────────────────
 
 @router.post("/api/courses/{course_id}/summary/generate")
-def generate_summary(course_id: str, db: Session = Depends(get_db)):
-    """Generate a plain-text summary across all notes in a course. Not persisted."""
+def generate_summary(
+    course_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
     course = db.query(Course).filter(
-        Course.id == course_id, Course.deleted_at == None
+        Course.id == course_id, Course.deleted_at == None, Course.user_id == current_user
     ).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found.")
 
     notes = db.query(Note).filter(
-        Note.course_id == course_id, Note.deleted_at == None
+        Note.course_id == course_id, Note.deleted_at == None, Note.user_id == current_user
     ).all()
     if not notes:
         raise HTTPException(status_code=422, detail="No notes in this course.")
@@ -184,7 +206,6 @@ def generate_summary(course_id: str, db: Session = Depends(get_db)):
         )
         for n in notes
     )
-
     summary = generate_course_summary(combined, course.name)
     return {"summary": summary}
 
@@ -203,11 +224,15 @@ def _session_out(s: StudySession) -> StudySessionOut:
 
 
 @router.post("/api/study-session/generate", response_model=StudySessionOut)
-def generate_study_session(body: StudySessionRequest, db: Session = Depends(get_db)):
-    """Generate flashcards or practice questions spanning multiple notes and persist the session."""
+def generate_study_session(
+    body: StudySessionRequest,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
     notes = db.query(Note).filter(
         Note.id.in_(body.note_ids),
         Note.deleted_at == None,
+        Note.user_id == current_user,
     ).all()
     if not notes:
         raise HTTPException(status_code=404, detail="No valid notes found.")
@@ -226,6 +251,7 @@ def generate_study_session(body: StudySessionRequest, db: Session = Depends(get_
             raise HTTPException(status_code=502, detail="AI did not return any questions.")
 
     session = StudySession(
+        user_id=current_user,
         note_ids=json.dumps([n.id for n in notes]),
         note_titles=json.dumps([n.title for n in notes]),
         tool=body.tool,
@@ -238,27 +264,33 @@ def generate_study_session(body: StudySessionRequest, db: Session = Depends(get_
 
 
 @router.get("/api/study-sessions", response_model=list[StudySessionOut])
-def list_study_sessions(db: Session = Depends(get_db)):
-    """Return all saved multi-note study sessions, newest first."""
+def list_study_sessions(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
     sessions = db.query(StudySession).filter(
-        StudySession.deleted_at == None
+        StudySession.deleted_at == None,
+        StudySession.user_id == current_user,
     ).order_by(StudySession.created_at.desc()).all()
     return [_session_out(s) for s in sessions]
 
 
 @router.delete("/api/study-sessions/{session_id}", response_model=MessageOut)
-def delete_study_session(session_id: str, db: Session = Depends(get_db)):
-    """Soft-delete a saved study session."""
+def delete_study_session(
+    session_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
     s = db.query(StudySession).filter(
         StudySession.id == session_id,
         StudySession.deleted_at == None,
+        StudySession.user_id == current_user,
     ).first()
     if not s:
         raise HTTPException(status_code=404, detail="Session not found.")
     s.deleted_at = datetime.now(timezone.utc)
     db.commit()
     return MessageOut(message="Session deleted.")
-
 
 
 # ── Serializers ───────────────────────────────────────────────────────────────

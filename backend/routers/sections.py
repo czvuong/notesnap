@@ -3,12 +3,16 @@ routers/sections.py — /api/notes/{note_id}/sections
 
 Granular section management. Every edit logs a SectionRevision before
 writing, so no content is ever silently overwritten.
+
+Sections are scoped through their parent note's user_id — all routes
+verify note ownership before touching any section.
 """
 
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from auth import get_current_user
 from config import settings
 from database import get_db
 from models import Note, NoteSection, SectionRevision
@@ -27,8 +31,10 @@ router = APIRouter(prefix="/api/notes/{note_id}/sections", tags=["sections"])
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _get_active_note(db: Session, note_id: str) -> Note:
-    note = db.query(Note).filter(Note.id == note_id, Note.deleted_at == None).first()
+def _get_active_note(db: Session, note_id: str, user_id: str) -> Note:
+    note = db.query(Note).filter(
+        Note.id == note_id, Note.deleted_at == None, Note.user_id == user_id
+    ).first()
     if not note:
         raise HTTPException(status_code=404, detail="Note not found.")
     return note
@@ -59,9 +65,12 @@ def _to_out(s: NoteSection) -> SectionOut:
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @router.get("", response_model=list[SectionOut])
-def list_sections(note_id: str, db: Session = Depends(get_db)):
-    """Return all active sections for a note, in order."""
-    _get_active_note(db, note_id)
+def list_sections(
+    note_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    _get_active_note(db, note_id, current_user)
     sections = (
         db.query(NoteSection)
         .filter(NoteSection.note_id == note_id, NoteSection.deleted_at == None)
@@ -72,9 +81,13 @@ def list_sections(note_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=SectionOut, status_code=status.HTTP_201_CREATED)
-def add_section(note_id: str, body: SectionCreate, db: Session = Depends(get_db)):
-    """Add a new section to an existing note."""
-    note = _get_active_note(db, note_id)
+def add_section(
+    note_id: str,
+    body: SectionCreate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    note = _get_active_note(db, note_id, current_user)
     section = NoteSection(
         note_id=note.id,
         section_order=body.section_order,
@@ -95,18 +108,11 @@ def update_section(
     section_id: str,
     body: SectionUpdate,
     db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
 ):
-    """
-    Update one section's content or heading.
-
-    Before writing, a SectionRevision is logged capturing the before state.
-    This ensures no edit is ever silently lost — users can always restore
-    a previous version via GET .../revisions and POST .../revisions/{id}/restore.
-    """
-    _get_active_note(db, note_id)
+    _get_active_note(db, note_id, current_user)
     section = _get_active_section(db, note_id, section_id)
 
-    # Log the revision BEFORE making changes
     any_content_changed = (
         (body.content is not None and body.content != section.content)
         or (body.heading is not None and body.heading != section.heading)
@@ -122,7 +128,6 @@ def update_section(
         )
         db.add(revision)
 
-    # Apply updates
     if body.content is not None:
         section.content = body.content
     if body.heading is not None:
@@ -143,27 +148,24 @@ def reorder_sections(
     note_id: str,
     body: SectionReorderRequest,
     db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
 ):
-    """
-    Update section ordering without touching content.
-    Accepts a list of section IDs in the desired new order.
-    """
-    _get_active_note(db, note_id)
+    _get_active_note(db, note_id, current_user)
     for new_order, section_id in enumerate(body.order):
         section = _get_active_section(db, note_id, section_id)
         section.section_order = new_order
-
     db.commit()
-    return list_sections(note_id, db)
+    return list_sections(note_id, db, current_user)
 
 
 @router.delete("/{section_id}", response_model=SoftDeleteOut)
-def delete_section(note_id: str, section_id: str, db: Session = Depends(get_db)):
-    """
-    Soft-delete a single section.
-    The rest of the note is untouched.
-    """
-    _get_active_note(db, note_id)
+def delete_section(
+    note_id: str,
+    section_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    _get_active_note(db, note_id, current_user)
     section = _get_active_section(db, note_id, section_id)
     now = datetime.now(timezone.utc)
     section.deleted_at = now
@@ -178,9 +180,13 @@ def delete_section(note_id: str, section_id: str, db: Session = Depends(get_db))
 # ── Revision history ──────────────────────────────────────────────────────────
 
 @router.get("/{section_id}/revisions", response_model=list[RevisionOut])
-def get_revisions(note_id: str, section_id: str, db: Session = Depends(get_db)):
-    """Return the full edit history for one section, newest first."""
-    _get_active_note(db, note_id)
+def get_revisions(
+    note_id: str,
+    section_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    _get_active_note(db, note_id, current_user)
     revisions = (
         db.query(SectionRevision)
         .filter(SectionRevision.section_id == section_id)
@@ -208,13 +214,9 @@ def restore_revision(
     section_id: str,
     revision_id: str,
     db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
 ):
-    """
-    Restore a section to a previous version.
-    This creates a NEW revision (the restore action itself) rather than
-    erasing history — the audit log is always append-only.
-    """
-    _get_active_note(db, note_id)
+    _get_active_note(db, note_id, current_user)
     section = _get_active_section(db, note_id, section_id)
 
     revision = db.query(SectionRevision).filter(
@@ -224,7 +226,6 @@ def restore_revision(
     if not revision:
         raise HTTPException(status_code=404, detail="Revision not found.")
 
-    # Log the restore as a new revision
     restore_revision_log = SectionRevision(
         section_id=section.id,
         previous_content=section.content,
@@ -235,7 +236,6 @@ def restore_revision(
     )
     db.add(restore_revision_log)
 
-    # Apply the restore
     section.content = revision.previous_content
     section.heading = revision.previous_heading
     section.updated_at = datetime.now(timezone.utc)

@@ -1,11 +1,14 @@
 """
 routers/courses.py — /api/courses
+
+All routes require authentication. Courses are scoped to the current user.
 """
 
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from auth import get_current_user
 from config import settings
 from database import get_db
 from models import Course, Note
@@ -14,9 +17,11 @@ from schemas import CourseCreate, CourseOut, CourseUpdate, MessageOut, SoftDelet
 router = APIRouter(prefix="/api/courses", tags=["courses"])
 
 
-def _course_or_404(db: Session, course_id: str) -> Course:
+def _course_or_404(db: Session, course_id: str, user_id: str) -> Course:
     course = db.query(Course).filter(
-        Course.id == course_id, Course.deleted_at == None
+        Course.id == course_id,
+        Course.deleted_at == None,
+        Course.user_id == user_id,
     ).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found.")
@@ -38,14 +43,28 @@ def _to_out(course: Course, db: Session) -> CourseOut:
 
 
 @router.get("", response_model=list[CourseOut])
-def list_courses(db: Session = Depends(get_db)):
-    courses = db.query(Course).filter(Course.deleted_at == None).order_by(Course.name).all()
+def list_courses(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    courses = db.query(Course).filter(
+        Course.deleted_at == None, Course.user_id == current_user
+    ).order_by(Course.name).all()
     return [_to_out(c, db) for c in courses]
 
 
 @router.post("", response_model=CourseOut, status_code=status.HTTP_201_CREATED)
-def create_course(body: CourseCreate, db: Session = Depends(get_db)):
-    course = Course(name=body.name, description=body.description, color_hex=body.color_hex)
+def create_course(
+    body: CourseCreate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    course = Course(
+        user_id=current_user,
+        name=body.name,
+        description=body.description,
+        color_hex=body.color_hex,
+    )
     db.add(course)
     db.commit()
     db.refresh(course)
@@ -53,14 +72,22 @@ def create_course(body: CourseCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{course_id}", response_model=CourseOut)
-def get_course(course_id: str, db: Session = Depends(get_db)):
-    course = _course_or_404(db, course_id)
-    return _to_out(course, db)
+def get_course(
+    course_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    return _to_out(_course_or_404(db, course_id, current_user), db)
 
 
 @router.patch("/{course_id}", response_model=CourseOut)
-def update_course(course_id: str, body: CourseUpdate, db: Session = Depends(get_db)):
-    course = _course_or_404(db, course_id)
+def update_course(
+    course_id: str,
+    body: CourseUpdate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    course = _course_or_404(db, course_id, current_user)
     if body.name is not None:
         course.name = body.name
     if body.description is not None:
@@ -74,17 +101,19 @@ def update_course(course_id: str, body: CourseUpdate, db: Session = Depends(get_
 
 
 @router.delete("/{course_id}", response_model=SoftDeleteOut)
-def delete_course(course_id: str, db: Session = Depends(get_db)):
-    """
-    Soft-delete a course. Notes in it become unorganized (course_id set to null)
-    rather than being deleted themselves.
-    """
-    course = _course_or_404(db, course_id)
+def delete_course(
+    course_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    course = _course_or_404(db, course_id, current_user)
     now = datetime.now(timezone.utc)
     course.deleted_at = now
 
     # Unassign notes rather than deleting them
-    db.query(Note).filter(Note.course_id == course.id).update({"course_id": None})
+    db.query(Note).filter(
+        Note.course_id == course.id, Note.user_id == current_user
+    ).update({"course_id": None})
 
     db.commit()
     return SoftDeleteOut(

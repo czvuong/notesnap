@@ -1,14 +1,15 @@
 """
 routers/preferences.py — /api/preferences
 
-Single-user preferences. Always exactly one row in the table.
-GET creates the row with defaults if it doesn't exist yet.
+Per-user preferences. One row per user, keyed by user_id.
+GET creates the row with defaults if it doesn't exist for this user yet.
 """
 
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from auth import get_current_user
 from database import get_db
 from models import UserPreferences
 from schemas import PreferencesOut, PreferencesUpdate
@@ -16,10 +17,10 @@ from schemas import PreferencesOut, PreferencesUpdate
 router = APIRouter(prefix="/api/preferences", tags=["preferences"])
 
 
-def _get_or_create_prefs(db: Session) -> UserPreferences:
-    prefs = db.query(UserPreferences).first()
+def _get_or_create_prefs(db: Session, user_id: str) -> UserPreferences:
+    prefs = db.query(UserPreferences).filter(UserPreferences.user_id == user_id).first()
     if not prefs:
-        prefs = UserPreferences()
+        prefs = UserPreferences(user_id=user_id)
         db.add(prefs)
         db.commit()
         db.refresh(prefs)
@@ -27,13 +28,20 @@ def _get_or_create_prefs(db: Session) -> UserPreferences:
 
 
 @router.get("", response_model=PreferencesOut)
-def get_preferences(db: Session = Depends(get_db)):
-    return _to_out(_get_or_create_prefs(db))
+def get_preferences(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    return _to_out(_get_or_create_prefs(db, current_user))
 
 
 @router.patch("", response_model=PreferencesOut)
-def update_preferences(body: PreferencesUpdate, db: Session = Depends(get_db)):
-    prefs = _get_or_create_prefs(db)
+def update_preferences(
+    body: PreferencesUpdate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    prefs = _get_or_create_prefs(db, current_user)
     if body.default_mode is not None:
         prefs.default_mode = body.default_mode
     if body.preferred_heading_style is not None:
