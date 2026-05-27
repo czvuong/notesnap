@@ -14,13 +14,16 @@ from config import settings
 
 
 # ── Engine ────────────────────────────────────────────────────────────────────
-# StaticPool + check_same_thread=False are required for SQLite in a threaded
-# web server context. For Postgres in production you'd remove both.
-engine = create_engine(
-    settings.DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+# SQLite requires StaticPool + check_same_thread=False for threaded servers.
+# PostgreSQL uses the default pool with no extra connect_args.
+if settings.DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(
+        settings.DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+else:
+    engine = create_engine(settings.DATABASE_URL)
 
 # ── Session factory ───────────────────────────────────────────────────────────
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

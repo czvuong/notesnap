@@ -10,6 +10,8 @@ Design rules enforced here:
   - The section_revisions table is the ONLY table without deleted_at —
     revision history is a permanent audit log and is never removed.
   - We intentionally have NO column for storing uploaded images.
+  - user_id is nullable for now (local dev without Clerk). The auth
+    middleware in auth.py enforces it on all protected routes.
 """
 
 import uuid
@@ -41,6 +43,7 @@ class Course(Base):
     __tablename__ = "courses"
 
     id          = Column(String, primary_key=True, default=_uuid)
+    user_id     = Column(String, nullable=True, index=True)
     name        = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
     color_hex   = Column(String(7), nullable=False, default="#6366f1")
@@ -56,6 +59,7 @@ class Note(Base):
     __tablename__ = "notes"
 
     id              = Column(String, primary_key=True, default=_uuid)
+    user_id         = Column(String, nullable=True, index=True)
     title           = Column(String(500), nullable=False)
     course_id       = Column(String, ForeignKey("courses.id"), nullable=True)
     batch_id        = Column(String, nullable=True, index=True)  # groups notes from one batch upload
@@ -127,9 +131,12 @@ class SectionRevision(Base):
 
 class Tag(Base):
     __tablename__ = "tags"
+    # Tags are per-user: unique constraint is (user_id, name) not just name
+    __table_args__ = (UniqueConstraint("user_id", "name"),)
 
     id         = Column(String, primary_key=True, default=_uuid)
-    name       = Column(String(100), nullable=False, unique=True)
+    user_id    = Column(String, nullable=True, index=True)
+    name       = Column(String(100), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=_now)
 
     # Relationships
@@ -159,6 +166,7 @@ class Correction(Base):
     __tablename__ = "corrections"
 
     id               = Column(String, primary_key=True, default=_uuid)
+    user_id          = Column(String, nullable=True, index=True)
     section_id       = Column(String, ForeignKey("note_sections.id"), nullable=True)
     original_text    = Column(Text, nullable=False)
     corrected_text   = Column(Text, nullable=False)
@@ -232,26 +240,28 @@ class StudySession(Base):
     """
     __tablename__ = "study_sessions"
 
-    id         = Column(String, primary_key=True, default=_uuid)
-    note_ids   = Column(Text, nullable=False)           # JSON list of note UUIDs
-    note_titles = Column(Text, nullable=False)          # JSON list of note titles (for display without extra JOIN)
-    tool       = Column(String(30), nullable=False)     # "flashcards" | "practice_questions"
-    items      = Column(Text, nullable=False)           # JSON list of generated cards/questions
-    created_at = Column(DateTime(timezone=True), nullable=False, default=_now)
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    id          = Column(String, primary_key=True, default=_uuid)
+    user_id     = Column(String, nullable=True, index=True)
+    note_ids    = Column(Text, nullable=False)           # JSON list of note UUIDs
+    note_titles = Column(Text, nullable=False)           # JSON list of note titles (for display without extra JOIN)
+    tool        = Column(String(30), nullable=False)     # "flashcards" | "practice_questions"
+    items       = Column(Text, nullable=False)           # JSON list of generated cards/questions
+    created_at  = Column(DateTime(timezone=True), nullable=False, default=_now)
+    deleted_at  = Column(DateTime(timezone=True), nullable=True)
 
 
 class CostLog(Base):
     """
-    One row per LLM API call.  Tracks token usage and estimated cost so the
-    user can see what the system is spending over time.
+    One row per LLM API call. Tracks token usage and estimated cost.
+    Also used to enforce per-user daily extraction limits.
 
     estimated_cost_usd is NULL when the model's published rate is unknown
-    (e.g. TritonAI internal models).  Token counts are always recorded.
+    (e.g. TritonAI internal models). Token counts are always recorded.
     """
     __tablename__ = "cost_logs"
 
     id                 = Column(String, primary_key=True, default=_uuid)
+    user_id            = Column(String, nullable=True, index=True)
     model              = Column(String(100), nullable=False)
     # "ocr" | "structure" | "vision_structure" | "flashcards" |
     # "practice_questions" | "course_summary" | "pdf_structure"
@@ -264,13 +274,13 @@ class CostLog(Base):
 
 class UserPreferences(Base):
     """
-    Singleton table — always exactly one row.
-    Stores global extraction preferences and the user's style choices
-    that get injected into every AI prompt.
+    Per-user preferences. One row per user (keyed by user_id).
+    GET creates the row with defaults if it doesn't exist for that user yet.
     """
     __tablename__ = "user_preferences"
 
     id                      = Column(String, primary_key=True, default=_uuid)
+    user_id                 = Column(String, nullable=True, index=True)
     default_mode            = Column(String(20), nullable=False, default="transcribe")
     preferred_heading_style = Column(String(20), nullable=False, default="bold")
     preferred_bullet_style  = Column(String(10), nullable=False, default="dash")

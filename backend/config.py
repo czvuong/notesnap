@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "sqlite:///./notesnap.db"
 
+    # Auth (Clerk)
+    CLERK_SECRET_KEY: str = ""
+
+    # Usage limits
+    DAILY_EXTRACTION_LIMIT: int = 30
+
     # CORS — comma-separated list of allowed origins
     CORS_ORIGINS: str = "http://localhost:5173"
 
