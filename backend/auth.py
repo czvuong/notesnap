@@ -51,10 +51,14 @@ def _get_jwks() -> dict:
     from config import settings as _s
 
     pub_key = _s.CLERK_PUBLISHABLE_KEY
+    if not pub_key:
+        raise RuntimeError("CLERK_PUBLISHABLE_KEY is not set in environment variables.")
     b64_part = pub_key.split("_", 2)[-1]          # strip "pk_test_" or "pk_live_"
     # Add padding if needed
     padded = b64_part + "=" * (-len(b64_part) % 4)
     domain = base64.b64decode(padded).decode("utf-8").rstrip("$")
+    if not domain:
+        raise RuntimeError(f"Could not decode Clerk domain from publishable key: {pub_key!r}")
     jwks_url = f"https://{domain}/.well-known/jwks.json"
 
     response = httpx.get(jwks_url, timeout=10)
