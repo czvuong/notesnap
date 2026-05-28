@@ -41,26 +41,16 @@ def _get_jwks() -> dict:
     Cached for the lifetime of the process — keys rarely rotate.
     Call _get_jwks.cache_clear() if you ever need to force a refresh.
 
-    Uses the public JWKS endpoint derived from the publishable key, which
-    requires no authentication. The publishable key encodes the Clerk
-    instance domain in base64 after the 'pk_test_' prefix.
+    Uses CLERK_JWKS_URL set directly in environment variables.
+    Example: https://fresh-pangolin-54.clerk.accounts.dev/.well-known/jwks.json
     """
-    # Decode the instance domain from the publishable key.
-    # pk_test_<base64(domain + "$")> → strip prefix, decode, strip trailing "$"
-    import base64
-    from config import settings as _s
-
-    pub_key = _s.CLERK_PUBLISHABLE_KEY
-    if not pub_key:
-        raise RuntimeError("CLERK_PUBLISHABLE_KEY is not set in environment variables.")
-    b64_part = pub_key.split("_", 2)[-1]          # strip "pk_test_" or "pk_live_"
-    # Add padding if needed
-    padded = b64_part + "=" * (-len(b64_part) % 4)
-    domain = base64.b64decode(padded).decode("utf-8").rstrip("$")
-    if not domain:
-        raise RuntimeError(f"Could not decode Clerk domain from publishable key: {pub_key!r}")
-    jwks_url = f"https://{domain}/.well-known/jwks.json"
-
+    jwks_url = settings.CLERK_JWKS_URL
+    if not jwks_url:
+        raise RuntimeError(
+            "CLERK_JWKS_URL is not set in environment variables. "
+            "Set it to your Clerk instance's JWKS endpoint, e.g. "
+            "https://<instance>.clerk.accounts.dev/.well-known/jwks.json"
+        )
     response = httpx.get(jwks_url, timeout=10)
     response.raise_for_status()
     return response.json()

@@ -97,10 +97,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — only allow requests from the configured frontend origin
+# CORS — allow explicitly listed origins (e.g. localhost for dev) plus any
+# Vercel preview/production deployment URL for this project via regex.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
+    allow_origin_regex=r"https://04-student-choice-czvuong.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
