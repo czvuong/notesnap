@@ -4,7 +4,7 @@ NoteSnap is deployed and publicly accessible — no installation required.
 
 ## Live Demo
 
-**https://04-student-choice-czvuong-assignmen.vercel.app**
+**https://04-notesnap.vercel.app**
 
 1. Visit the URL above and sign in with any Google account or email address.
 2. Go to **Upload** and drop a photo of handwritten notes, a whiteboard, or a lecture slide (JPEG, PNG, HEIC, or text-based PDF). Select **Transcribe** or **Study Guide** mode and click Extract.

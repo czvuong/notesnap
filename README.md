@@ -12,9 +12,9 @@ NoteSnap is an AI-powered document scanning and study tool that transforms photo
 
 | Service | URL |
 |---------|-----|
-| Frontend (Vercel) | https://04-student-choice-czvuong-assignmen.vercel.app |
-| Backend API (Railway) | https://04-student-choice-czvuong-assignment-4-production.up.railway.app |
-| API docs | https://04-student-choice-czvuong-assignment-4-production.up.railway.app/docs |
+| Frontend (Vercel) | https://04-notesnap.vercel.app |
+| Backend API (Railway) | https://04-notesnap.up.railway.app |
+| API docs | https://04-notesnap.up.railway.app/docs |
 
 Sign in with a UCSD Google account or any email via Clerk. All notes, courses, tags, and preferences are fully isolated per user — two accounts share nothing.
 
