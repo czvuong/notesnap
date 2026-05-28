@@ -67,6 +67,9 @@ def _get_jwks() -> dict:
     except httpx.RequestError as e:
         logger.error("JWKS network error (%s): %s", type(e).__name__, e)
         raise RuntimeError(f"Could not reach JWKS endpoint: {type(e).__name__}: {e}") from e
+    except Exception as e:
+        logger.error("JWKS unexpected exception (%s): %s", type(e).__name__, e, exc_info=True)
+        raise RuntimeError(f"Unexpected JWKS error: {type(e).__name__}: {e}") from e
 
 
 def _verify_token(token: str) -> str:

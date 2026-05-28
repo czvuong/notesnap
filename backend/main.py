@@ -76,6 +76,18 @@ async def lifespan(app: FastAPI):
     init_db()
     logger.info("Database ready.")
 
+    # Probe Clerk JWKS at startup so any auth misconfiguration is immediately visible.
+    if settings.CLERK_SECRET_KEY:
+        try:
+            from auth import _get_jwks
+            _get_jwks.cache_clear()
+            keys = _get_jwks()
+            logger.info("Clerk JWKS probe OK — %d key(s) loaded.", len(keys.get("keys", [])))
+        except Exception as exc:
+            logger.error("Clerk JWKS probe FAILED (%s): %s", type(exc).__name__, exc)
+    else:
+        logger.warning("CLERK_SECRET_KEY not set — running in dev mode (no auth).")
+
     scheduler = BackgroundScheduler()
     scheduler.add_job(_purge_expired_soft_deletes, "interval", hours=24, id="purge_job")
     scheduler.start()
