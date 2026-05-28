@@ -340,19 +340,6 @@ Images go through a two-step process:
 
 All prompts live in `prompts.py` with no FastAPI or database imports, so they can be tested and iterated on through the harness independently of the server.
 
-## AI Transcripts
-
-See the `transcripts/` folder for exported chat logs from AI assistants used during development.
-
-| File | Topic |
-|------|-------|
-| `01-image-sections-and-storage.md` | Adding image section attachments; server-side storage decision |
-| `02-four-bugs-one-message.md` | Fixing four concurrent bugs in one session |
-| `03-dashboard-counts-wrong.md` | Debugging stale study-material counts in the hub |
-| `04-remove-stage.md` | Evaluating classmate suggestion to merge the two pipeline stages; keeping them separate; adding OCR result cache |
-| `05-duplicate-document-detection.md` | Evaluating classmate caching feedback; implementing duplicate detection via SHA-256 hashing and a blocking modal |
-| `06-batch-upload.md` | Full batch upload feature: scope decision, parallel extraction, batch grouping in the Library, badge UX fixes, and URL sync debugging |
-
 ## Limitations
 
 - **Scanned PDFs are not supported** — `pypdf` can only extract text from PDFs with embedded text layers. For scanned or image-only PDFs, export the pages as PNG/JPEG first.
