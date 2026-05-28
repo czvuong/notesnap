@@ -19,12 +19,15 @@ Usage in a route:
 """
 
 import httpx
+import logging
 from functools import lru_cache
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
 from config import settings
+
+logger = logging.getLogger(__name__)
 
 # Clerk's JWKS endpoint — public keys used to verify JWTs.
 # The secret key is used to derive the issuer URL.
@@ -51,9 +54,19 @@ def _get_jwks() -> dict:
             "Set it to your Clerk instance's JWKS endpoint, e.g. "
             "https://<instance>.clerk.accounts.dev/.well-known/jwks.json"
         )
-    response = httpx.get(jwks_url, timeout=10)
-    response.raise_for_status()
-    return response.json()
+    logger.info("Fetching JWKS from: %s", jwks_url)
+    try:
+        response = httpx.get(jwks_url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        logger.info("JWKS fetched successfully, got %d key(s)", len(data.get("keys", [])))
+        return data
+    except httpx.HTTPStatusError as e:
+        logger.error("JWKS endpoint returned HTTP %s: %s", e.response.status_code, e.response.text)
+        raise RuntimeError(f"JWKS endpoint returned HTTP {e.response.status_code}") from e
+    except httpx.RequestError as e:
+        logger.error("JWKS network error (%s): %s", type(e).__name__, e)
+        raise RuntimeError(f"Could not reach JWKS endpoint: {type(e).__name__}: {e}") from e
 
 
 def _verify_token(token: str) -> str:
@@ -68,6 +81,14 @@ def _verify_token(token: str) -> str:
 
     try:
         jwks = _get_jwks()
+    except RuntimeError as e:
+        logger.error("JWKS fetch failed: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Auth configuration error: {e}",
+        )
+
+    try:
         # Decode without verifying audience — Clerk JWTs don't always
         # include a standard 'aud' claim.
         payload = jwt.decode(
