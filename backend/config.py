@@ -43,6 +43,7 @@ class Settings(BaseSettings):
 
     # Auth (Clerk)
     CLERK_SECRET_KEY: str = ""
+    CLERK_PUBLISHABLE_KEY: str = ""
 
     # Usage limits
     DAILY_EXTRACTION_LIMIT: int = 30

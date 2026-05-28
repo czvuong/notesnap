@@ -40,17 +40,24 @@ def _get_jwks() -> dict:
     Fetch Clerk's public keys from their JWKS endpoint.
     Cached for the lifetime of the process — keys rarely rotate.
     Call _get_jwks.cache_clear() if you ever need to force a refresh.
+
+    Uses the public JWKS endpoint derived from the publishable key, which
+    requires no authentication. The publishable key encodes the Clerk
+    instance domain in base64 after the 'pk_test_' prefix.
     """
-    # Derive the instance ID from the secret key.
-    # Clerk secret keys look like: sk_test_<instance_id>_<random>
-    # The JWKS URL is based on the publishable key's domain, but we can
-    # also fetch it directly from Clerk's backend API using the secret key.
-    jwks_url = f"https://api.clerk.com/v1/jwks"
-    response = httpx.get(
-        jwks_url,
-        headers={"Authorization": f"Bearer {settings.CLERK_SECRET_KEY}"},
-        timeout=10,
-    )
+    # Decode the instance domain from the publishable key.
+    # pk_test_<base64(domain + "$")> → strip prefix, decode, strip trailing "$"
+    import base64
+    from config import settings as _s
+
+    pub_key = _s.CLERK_PUBLISHABLE_KEY
+    b64_part = pub_key.split("_", 2)[-1]          # strip "pk_test_" or "pk_live_"
+    # Add padding if needed
+    padded = b64_part + "=" * (-len(b64_part) % 4)
+    domain = base64.b64decode(padded).decode("utf-8").rstrip("$")
+    jwks_url = f"https://{domain}/.well-known/jwks.json"
+
+    response = httpx.get(jwks_url, timeout=10)
     response.raise_for_status()
     return response.json()
 
