@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import {
   Palette, Type, Cpu, CheckCircle2, Loader2, AlertCircle,
 } from 'lucide-react'
+import { useUser } from '@clerk/clerk-react'
 import { useTheme, THEMES } from '../hooks/useTheme.js'
 import { getPreferences, updatePreferences, checkHealth } from '../api.js'
 import './Preferences.css'
@@ -23,7 +24,8 @@ const BULLET_STYLES = [
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Preferences() {
-  const { theme, setTheme } = useTheme()
+  const { user } = useUser()
+  const { theme, setTheme } = useTheme(user?.id ?? null)
 
   const [prefs,   setPrefs]   = useState(null)
   const [loading, setLoading] = useState(true)

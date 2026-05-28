@@ -41,8 +41,10 @@ function AuthTokenSyncer() {
 }
 
 export default function App() {
-  // Initialise theme on mount — reads localStorage and sets data-theme on <html>
-  useTheme()
+  // Initialise theme on mount — reads localStorage and sets data-theme on <html>.
+  // Scoped by userId so each Clerk account keeps its own theme.
+  const { user } = useUser()
+  useTheme(user?.id ?? null)
 
   return (
     <BrowserRouter>
