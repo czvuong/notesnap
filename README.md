@@ -75,46 +75,29 @@ npm install
 
 ### Environment Variables
 
-`backend/.env.example`:
+#### Backend (`backend/.env`) — local dev only, never committed
 
-```env
-# AI provider: "tritonai" (recommended) or "anthropic"
-AI_PROVIDER=tritonai
+| Variable | Value |
+|----------|-------|
+| `TRITONAI_API_KEY` | Your TritonAI key (UCSD SSO) |
+| `TRITONAI_BASE_URL` | `https://tritonai-api.ucsd.edu/v1` |
+| `TRITONAI_OCR_MODEL` | `api-lightonocr-1b` |
+| `TRITONAI_TEXT_MODEL` | `api-gpt-oss-120b` |
+| `TRITONAI_VISION_MODEL` | `api-mistral-small-3.2-2506` |
+| `DATABASE_URL` | `sqlite:///./notesnap.db` |
+| `CORS_ORIGINS` | `http://localhost:5173` |
+| `CLERK_SECRET_KEY` | Leave blank — skips auth in dev mode |
+| `CLERK_PUBLISHABLE_KEY` | Leave blank in dev mode |
+| `CLERK_JWKS_URL` | Leave blank in dev mode |
 
-# TritonAI (UCSD)
-TRITONAI_API_KEY=your-tritonai-api-key-here
-TRITONAI_BASE_URL=https://tritonai.ucsd.edu/api/v1
-TRITONAI_OCR_MODEL=api-lightonocr-1b
-TRITONAI_TEXT_MODEL=api-gpt-oss-120b
-TRITONAI_VISION_MODEL=api-mistral-small-3.2-2506
+#### Frontend (`frontend/.env`) — local dev only, never committed
 
-# Only needed if AI_PROVIDER=anthropic
-ANTHROPIC_API_KEY=your-anthropic-api-key-here
-ANTHROPIC_MODEL=claude-sonnet-4-6
+| Variable | Value |
+|----------|-------|
+| `VITE_CLERK_PUBLISHABLE_KEY` | Your Clerk publishable key (or leave blank in dev) |
+| `VITE_API_BASE` | `http://localhost:8000` |
 
-# Database (SQLite for local dev; PostgreSQL for production)
-DATABASE_URL=sqlite:///./notesnap.db
-
-# Auth (Clerk) — leave blank to run in dev mode (no auth, hardcoded user)
-CLERK_SECRET_KEY=
-CLERK_PUBLISHABLE_KEY=
-CLERK_JWKS_URL=
-
-# CORS
-CORS_ORIGINS=http://localhost:5173
-
-# Limits
-MAX_UPLOAD_BYTES=10485760
-SOFT_DELETE_TTL_DAYS=7
-DAILY_EXTRACTION_LIMIT=30
-```
-
-`frontend/.env`:
-
-```env
-VITE_CLERK_PUBLISHABLE_KEY=your-clerk-publishable-key-here
-VITE_API_BASE=http://localhost:8000
-```
+> **Dev mode:** If `CLERK_SECRET_KEY` is blank, the backend skips JWT verification and returns a hardcoded `dev_user` ID. All routes work without a Clerk account.
 
 ### Running the App
 
@@ -180,16 +163,23 @@ The app is deployed as two separate services:
 - `VITE_CLERK_PUBLISHABLE_KEY` and `VITE_API_BASE` set as Vercel environment variables
 - `vercel.json` catch-all rewrite routes all paths to `index.html` for React Router
 
-**Required Railway environment variables:**
+**Railway environment variables (backend):**
 
-```
-TRITONAI_API_KEY=...
-CLERK_SECRET_KEY=sk_test_...
-CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_JWKS_URL=https://<instance>.clerk.accounts.dev/.well-known/jwks.json
-DATABASE_URL=postgresql://...   # injected by Railway Postgres plugin
-CORS_ORIGINS=https://04-student-choice-czvuong-assignmen.vercel.app
-```
+| Variable | Where to get it |
+|----------|----------------|
+| `TRITONAI_API_KEY` | UCSD SSO → TritonAI dashboard |
+| `CLERK_SECRET_KEY` | Clerk dashboard → API Keys |
+| `CLERK_PUBLISHABLE_KEY` | Clerk dashboard → API Keys |
+| `CLERK_JWKS_URL` | `https://<your-instance>.clerk.accounts.dev/.well-known/jwks.json` |
+| `DATABASE_URL` | Auto-injected by the Railway Postgres plugin |
+| `CORS_ORIGINS` | `https://04-student-choice-czvuong-assignmen.vercel.app` |
+
+**Vercel environment variables (frontend):**
+
+| Variable | Where to get it |
+|----------|----------------|
+| `VITE_CLERK_PUBLISHABLE_KEY` | Clerk dashboard → API Keys |
+| `VITE_API_BASE` | Your Railway backend URL (no trailing slash) |
 
 ## Project Structure
 
