@@ -148,10 +148,10 @@ For the first deliverable, I want the app to be deployable with a real frontend,
   > ❌ No longer planned. The app is live and fully functional at the Vercel subdomain. A custom domain adds no functionality for the assignment.
 
 - **Public shareable note links: Opt-in toggle that generates a read-only public URL to share a note (accessible without login)**
-  > ❌ Not yet implemented. Per-user isolation was the focus for this initial submission. May implement after the review session.  
+  > 🔜 Planned. Will add a `is_public` boolean and `public_slug` field to the `Note` model in `backend/models.py`, a new unauthenticated `GET /api/notes/public/<slug>` route in `backend/routers/notes.py`, and a share toggle in the note editor in `frontend/src/pages/NoteEditor.jsx`.
 
 - **Mobile-responsive UI: Add responsive breakpoints for phone-sized screens**
-  > ❌ Not yet implemented. Could be useful for users to use from their phone, so will likely implement after the initial submission. 
+  > 🔜 Planned. Will add `@media` breakpoints to the existing CSS files across `frontend/src/pages/` (Upload, Library, NoteEditor, StudyHub) and update the sidebar nav in `frontend/src/App.jsx` to collapse on small screens.
 
 - **Admin usage dashboard: A private page (admin-only Clerk role) showing total users, total extractions this week, and estimated AI cost**
   > ⚠️ Partially implemented. `backend/routers/costs.py` — `GET /api/costs` and `GET /api/costs/summary` expose cost log data and per-model breakdowns. The full admin UI page with Clerk role-gating was not built, but the underlying data is queryable via the API.
