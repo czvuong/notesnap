@@ -20,7 +20,7 @@ Sign in with a UCSD Google account or any email via Clerk. All notes, courses, t
 
 ## Demo
 
-📹 Youtube Link
+📹 [Youtube Link](https://youtu.be/DrD4JY3oTgE)
 
 ## Features
 
