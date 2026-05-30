@@ -18,4 +18,4 @@ Each account's notes, courses, tags, and preferences are fully isolated. To veri
 The backend API and interactive docs are also publicly accessible:
 
 - Health check: https://notesnap.up.railway.app/api/health
-- API docs: https:/notesnap.up.railway.app/docs
+- API docs: https://notesnap.up.railway.app/docs
