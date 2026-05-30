@@ -17,5 +17,5 @@ Each account's notes, courses, tags, and preferences are fully isolated. To veri
 
 The backend API and interactive docs are also publicly accessible:
 
-- Health check: https://04-student-choice-czvuong-assignment-4-production.up.railway.app/api/health
-- API docs: https://04-student-choice-czvuong-assignment-4-production.up.railway.app/docs
+- Health check: https://notesnap.up.railway.app/api/health
+- API docs: https:/notesnap.up.railway.app/docs
