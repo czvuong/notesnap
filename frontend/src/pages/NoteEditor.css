@@ -411,3 +411,61 @@
 /* ── Spin ─────────────────────────────────────────────────────────────────── */
 .spin { animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Mobile responsive: ≤ 640px ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Topbar: allow wrapping, reduce gap */
+  .editor-topbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .editor-topbar-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Editor layout: single column (hide sidebar panel below main) */
+  .editor-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Unstick the editor sidebar on mobile */
+  .editor-sidebar {
+    position: static;
+  }
+
+  /* Source pane: unstick, full width, cap height */
+  .editor-source-pane {
+    position: static;
+    width: 100%;
+  }
+  .editor-body--with-source {
+    flex-direction: column;
+  }
+  .editor-body--with-source .editor-layout {
+    flex: unset;
+    width: 100%;
+  }
+  .editor-source-img {
+    max-height: 240px;
+  }
+  .editor-source-pdf {
+    height: 280px;
+    min-height: 180px;
+  }
+
+  /* Title */
+  .editor-title { font-size: 1.25rem; }
+
+  /* Section heading: reduce padding so actions don't overlap on small screens */
+  .section-heading-display { padding-right: 0; }
+  .section-view-actions {
+    position: static;
+    opacity: 1;
+    margin-bottom: 8px;
+    justify-content: flex-end;
+  }
+  .section-view { padding: 14px 16px; }
+}

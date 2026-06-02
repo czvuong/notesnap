@@ -324,3 +324,34 @@
 .modal-header { display: flex; align-items: center; gap: 10px; }
 .modal-header h3 { font-size: 1rem; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ── Mobile responsive: ≤ 640px ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Toolbar row 1: let search shrink, sort goes below if needed */
+  .library-toolbar-row1 {
+    flex-wrap: wrap;
+  }
+  .library-toolbar-row1 .sort-select {
+    min-width: 110px;
+  }
+
+  /* Notes grid: two smaller columns, or single on very small */
+  .notes-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+  }
+
+  /* Batch banner: wrap text */
+  .library-batch-banner {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .library-batch-banner .btn { margin-left: 0; }
+
+  /* Filter row: allow wrapping (already flex-wrap: wrap, just ensure gap is ok) */
+  .library-toolbar-row2 { gap: 6px; }
+  .filter-select { min-width: 110px; }
+
+  /* Pagination: tighter */
+  .pagination { gap: 2px; }
+}

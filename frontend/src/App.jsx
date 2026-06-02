@@ -9,10 +9,11 @@ import {
   Plug,
   BookMarked,
   Layers,
-  LogOut,
+  Menu,
+  X,
 } from 'lucide-react'
 import { SignedIn, SignedOut, RedirectToSignIn, useAuth, useUser, UserButton } from '@clerk/clerk-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTheme } from './hooks/useTheme.js'
 import { setTokenGetter } from './api.js'
 import Dashboard    from './pages/Dashboard.jsx'
@@ -46,6 +47,8 @@ export default function App() {
   const { user } = useUser()
   useTheme(user?.id ?? null)
 
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   return (
     <BrowserRouter>
       {/* Always sync the Clerk token into api.js when signed in */}
@@ -59,8 +62,31 @@ export default function App() {
       </SignedOut>
 
       <SignedIn>
+        {/* Mobile topbar — only visible on small screens via CSS */}
+        <div className="mobile-topbar">
+          <div className="mobile-topbar-brand">
+            <div className="mobile-topbar-brand-icon">
+              <BookMarked size={15} />
+            </div>
+            <span>NoteSnap</span>
+          </div>
+          <button
+            className="mobile-hamburger"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+          >
+            <Menu size={22} />
+          </button>
+        </div>
+
+        {/* Overlay backdrop — tapping closes sidebar on mobile */}
+        <div
+          className={`sidebar-overlay${sidebarOpen ? ' sidebar-overlay--visible' : ''}`}
+          onClick={() => setSidebarOpen(false)}
+        />
+
         <div className="app-layout">
-          <Sidebar />
+          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           <main className="app-main">
             <Routes>
               <Route path="/"              element={<Dashboard />}  />
@@ -92,15 +118,22 @@ const NAV_ITEMS = [
   { to: '/settings',label: 'Preferences',  Icon: Settings },
 ]
 
-function Sidebar() {
+function Sidebar({ open, onClose }) {
   return (
-    <aside className="sidebar">
-      {/* Brand */}
+    <aside className={`sidebar${open ? ' sidebar--open' : ''}`}>
+      {/* Brand (with close button on mobile) */}
       <div className="sidebar-brand">
         <div className="sidebar-brand-icon">
           <BookMarked size={18} />
         </div>
         <span className="sidebar-brand-name">NoteSnap</span>
+        <button
+          className="sidebar-close-btn"
+          onClick={onClose}
+          aria-label="Close menu"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       {/* Navigation */}
@@ -110,6 +143,7 @@ function Sidebar() {
             key={to}
             to={to}
             end={end}
+            onClick={onClose}
             className={({ isActive }) =>
               `sidebar-link${isActive ? ' sidebar-link--active' : ''}`
             }

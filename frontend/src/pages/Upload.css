@@ -378,3 +378,51 @@
 
 /* ── Spin utility ─────────────────────────────────────────────────────────── */
 .spin { animation: spin 0.7s linear infinite; }
+
+/* ── Mobile responsive: ≤ 640px ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Step indicator: smaller dots + hide labels on tiny screens */
+  .step-indicator { margin-bottom: 20px; }
+  .step-label { display: none; }
+  .step-line { width: 24px; margin: 0 4px; }
+
+  /* Mode cards: single column */
+  .mode-cards {
+    grid-template-columns: 1fr;
+  }
+
+  /* Review layout: stack all columns vertically */
+  .review-layout,
+  .review-layout--with-source {
+    grid-template-columns: 1fr;
+  }
+
+  /* Unstick the sidebar in single-column mobile layout */
+  .review-sidebar {
+    position: static;
+  }
+
+  /* Source pane: unstick and cap height */
+  .review-source-pane {
+    position: static;
+  }
+  .review-source-img {
+    max-height: 260px;
+  }
+  .review-source-pdf {
+    height: 300px;
+    min-height: 200px;
+  }
+
+  /* Upload actions: full-width button */
+  .upload-actions {
+    justify-content: stretch;
+  }
+  .upload-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Dropzone: reduce padding */
+  .dropzone { padding: 28px 16px; }
+}

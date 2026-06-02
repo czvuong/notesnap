@@ -248,3 +248,49 @@
 /* ── Spin utility ─────────────────────────────────────────────────────────── */
 .spin { animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Mobile responsive: ≤ 640px ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Toolbar: wrap search + course select onto two lines */
+  .hub-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .hub-toolbar .search-wrap {
+    flex: 1 1 100%;
+  }
+  .hub-toolbar .hub-course-select {
+    max-width: 100%;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  /* Cards: reduce padding on tiny screens */
+  .hub-card {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  /* Selection bar: full-width stacked actions */
+  .hub-selection-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    top: 0;
+  }
+  .hub-selection-actions {
+    width: 100%;
+  }
+
+  /* Session modal: full-height on mobile */
+  .session-overlay {
+    padding: 16px 8px;
+  }
+  .session-modal {
+    max-width: 100%;
+  }
+  .session-modal-body {
+    padding: 16px;
+  }
+}

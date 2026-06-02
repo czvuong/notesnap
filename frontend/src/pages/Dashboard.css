@@ -225,3 +225,32 @@
 .course-row:hover .course-row-arrow {
   transform: translateX(3px);
 }
+
+/* ── Mobile responsive: ≤ 640px ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Stat grid: 2 columns on mobile */
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    padding: 14px;
+    gap: 10px;
+  }
+  .stat-card-value { font-size: 1.375rem; }
+
+  /* Recent notes: 2 columns on mobile */
+  .recent-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  /* Course info: allow wrapping */
+  .course-row-info {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .dash-section { margin-bottom: 24px; }
+}
