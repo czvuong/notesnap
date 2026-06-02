@@ -98,7 +98,9 @@ export default function Preferences() {
               className={`theme-card${theme === t.id ? ' theme-card--active' : ''}`}
               onClick={() => {
                 setTheme(t.id)
-                // Persist to backend so the theme syncs across devices
+                // Keep prefs state in sync so "Save preferences" doesn't overwrite
+                setPrefs(prev => prev ? { ...prev, theme: t.id } : prev)
+                // Persist to backend immediately so other devices can sync
                 updatePreferences({ theme: t.id }).catch(() => {})
               }}
             >

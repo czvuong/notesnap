@@ -57,8 +57,11 @@ def _run_migrations():
     Lightweight inline migrations for columns added after initial deploy.
     Uses ADD COLUMN IF NOT EXISTS (PostgreSQL 9.6+) so it's safe to run
     on every startup — it is a no-op when the column already exists.
-    Errors are caught and silently skipped (e.g. SQLite dev environment).
+    Errors are logged and skipped (e.g. SQLite dev environment).
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     migrations = [
         # Added: per-user theme preference (violet / blue / sage / dark)
         "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS "
@@ -69,8 +72,10 @@ def _run_migrations():
             try:
                 conn.execute(text(sql))
                 conn.commit()
-            except Exception:
+                logger.info("Migration OK: %s", sql[:60])
+            except Exception as exc:
                 conn.rollback()
+                logger.warning("Migration skipped (%s): %s", type(exc).__name__, exc)
 
 
 def init_db():

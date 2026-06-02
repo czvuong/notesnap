@@ -261,7 +261,7 @@ class PreferencesOut(_Base):
     preferred_heading_style: str
     preferred_bullet_style: str
     extra_instructions: Optional[str]
-    theme: str
+    theme: str = "violet"   # default so responses never fail if theme missing
     updated_at: datetime
 
 

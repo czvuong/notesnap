@@ -285,5 +285,8 @@ class UserPreferences(Base):
     preferred_heading_style = Column(String(20), nullable=False, default="bold")
     preferred_bullet_style  = Column(String(10), nullable=False, default="dash")
     extra_instructions      = Column(Text, nullable=True)
-    theme                   = Column(String(20), nullable=False, default="violet")
+    # NOTE: `theme` is intentionally NOT listed here so SQLAlchemy never includes
+    # it in generated SELECTs. It lives in the DB (added by _run_migrations) but
+    # is read/written via raw SQL in the preferences router to avoid crashing on
+    # deployments where the migration hasn't run yet.
     updated_at              = Column(DateTime(timezone=True), nullable=False, default=_now, onupdate=_now)
