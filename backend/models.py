@@ -285,4 +285,5 @@ class UserPreferences(Base):
     preferred_heading_style = Column(String(20), nullable=False, default="bold")
     preferred_bullet_style  = Column(String(10), nullable=False, default="dash")
     extra_instructions      = Column(Text, nullable=True)
+    theme                   = Column(String(20), nullable=False, default="violet")
     updated_at              = Column(DateTime(timezone=True), nullable=False, default=_now, onupdate=_now)

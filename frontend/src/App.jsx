@@ -15,7 +15,7 @@ import {
 import { SignedIn, SignedOut, RedirectToSignIn, useAuth, useUser, UserButton } from '@clerk/clerk-react'
 import { useEffect, useState } from 'react'
 import { useTheme } from './hooks/useTheme.js'
-import { setTokenGetter } from './api.js'
+import { setTokenGetter, getPreferences } from './api.js'
 import Dashboard    from './pages/Dashboard.jsx'
 import UploadPage   from './pages/Upload.jsx'
 import BatchUpload  from './pages/BatchUpload.jsx'
@@ -41,6 +41,22 @@ function AuthTokenSyncer() {
   return null
 }
 
+/**
+ * Fetches the user's saved theme from the backend on app load and applies it.
+ * This syncs the theme across devices — localStorage is the fast-load fallback,
+ * but the backend value is authoritative. Renders nothing.
+ */
+function ThemeSyncer({ userId }) {
+  const { setTheme } = useTheme(userId)
+  useEffect(() => {
+    if (!userId) return
+    getPreferences()
+      .then(prefs => { if (prefs?.theme) setTheme(prefs.theme) })
+      .catch(() => {}) // silently fall back to localStorage value
+  }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
+  return null
+}
+
 export default function App() {
   // Initialise theme on mount — reads localStorage and sets data-theme on <html>.
   // Scoped by userId so each Clerk account keeps its own theme.
@@ -54,6 +70,7 @@ export default function App() {
       {/* Always sync the Clerk token into api.js when signed in */}
       <SignedIn>
         <AuthTokenSyncer />
+        <ThemeSyncer userId={user?.id ?? null} />
       </SignedIn>
 
       {/* Redirect to Clerk's hosted sign-in page if not authenticated */}
@@ -157,7 +174,7 @@ function Sidebar({ open, onClose }) {
       {/* Footer */}
       <div className="sidebar-footer">
         <a
-          href="http://localhost:8000/docs"
+          href="https://notesnap.up.railway.app/docs"
           target="_blank"
           rel="noreferrer"
           className="sidebar-link sidebar-link--subtle"

@@ -50,6 +50,8 @@ def update_preferences(
         prefs.preferred_bullet_style = body.preferred_bullet_style
     if "extra_instructions" in body.model_fields_set:
         prefs.extra_instructions = body.extra_instructions
+    if body.theme is not None:
+        prefs.theme = body.theme
     prefs.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(prefs)
@@ -63,5 +65,6 @@ def _to_out(p: UserPreferences) -> PreferencesOut:
         preferred_heading_style=p.preferred_heading_style,
         preferred_bullet_style=p.preferred_bullet_style,
         extra_instructions=p.extra_instructions,
+        theme=getattr(p, "theme", "violet") or "violet",
         updated_at=p.updated_at,
     )

@@ -38,14 +38,18 @@ export default function Preferences() {
 
   useEffect(() => {
     getPreferences()
-      .then(setPrefs)
+      .then(data => {
+        setPrefs(data)
+        // Sync theme from backend so it matches across devices
+        if (data?.theme) setTheme(data.theme)
+      })
       .catch(() => setPrefs({ heading_style: 'title_case', bullet_style: 'dash' }))
       .finally(() => setLoading(false))
 
     checkHealth()
       .then(setHealth)
       .catch(() => setHealth(null))
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSave() {
     if (!prefs) return
@@ -85,14 +89,18 @@ export default function Preferences() {
           <h2>Theme</h2>
         </div>
         <p className="prefs-section-desc">
-          Choose a colour scheme. Changes apply instantly and are saved in your browser.
+          Choose a colour scheme. Changes apply instantly and sync across all your devices.
         </p>
         <div className="theme-grid">
           {THEMES.map(t => (
             <button
               key={t.id}
               className={`theme-card${theme === t.id ? ' theme-card--active' : ''}`}
-              onClick={() => setTheme(t.id)}
+              onClick={() => {
+                setTheme(t.id)
+                // Persist to backend so the theme syncs across devices
+                updatePreferences({ theme: t.id }).catch(() => {})
+              }}
             >
               <div className="theme-swatch" style={{ background: t.swatch }} />
               <span className="theme-label">{t.label}</span>

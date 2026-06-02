@@ -6,7 +6,7 @@ All other modules import `get_db` (a FastAPI dependency that yields
 a session) and `Base` (the declarative base all models inherit from).
 """
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from sqlalchemy.pool import StaticPool
 
@@ -52,12 +52,34 @@ def get_db():
         db.close()
 
 
+def _run_migrations():
+    """
+    Lightweight inline migrations for columns added after initial deploy.
+    Uses ADD COLUMN IF NOT EXISTS (PostgreSQL 9.6+) so it's safe to run
+    on every startup — it is a no-op when the column already exists.
+    Errors are caught and silently skipped (e.g. SQLite dev environment).
+    """
+    migrations = [
+        # Added: per-user theme preference (violet / blue / sage / dark)
+        "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS "
+        "theme VARCHAR(20) NOT NULL DEFAULT 'violet'",
+    ]
+    with engine.connect() as conn:
+        for sql in migrations:
+            try:
+                conn.execute(text(sql))
+                conn.commit()
+            except Exception:
+                conn.rollback()
+
+
 def init_db():
     """
-    Create all tables if they don't already exist.
+    Create all tables if they don't already exist, then apply inline migrations.
     Called once at application startup.
     In production you'd use Alembic migrations instead.
     """
     # Import models here so Base is aware of them before create_all
     import models  # noqa: F401
     Base.metadata.create_all(bind=engine)
+    _run_migrations()

@@ -253,6 +253,7 @@ class PreferencesUpdate(_Base):
     preferred_heading_style: Optional[Literal["bold", "numbered", "plain"]] = None
     preferred_bullet_style: Optional[Literal["dash", "dot", "arrow"]] = None
     extra_instructions: Optional[str] = Field(None, max_length=2000)
+    theme: Optional[Literal["violet", "blue", "sage", "dark"]] = None
 
 class PreferencesOut(_Base):
     id: str
@@ -260,6 +261,7 @@ class PreferencesOut(_Base):
     preferred_heading_style: str
     preferred_bullet_style: str
     extra_instructions: Optional[str]
+    theme: str
     updated_at: datetime
 
 
