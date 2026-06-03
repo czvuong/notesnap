@@ -324,6 +324,23 @@
 .modal-header { display: flex; align-items: center; gap: 10px; }
 .modal-header h3 { font-size: 1rem; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.share-modal { width: 460px; }
+
+/* Shared styles for bulk share modal (mirrors NoteEditor share modal) */
+.share-section-info { display: flex; align-items: flex-start; gap: 10px; }
+.share-icon-public  { color: var(--color-primary); margin-top: 2px; flex-shrink: 0; }
+.share-icon-private { color: var(--color-text-muted); margin-top: 2px; flex-shrink: 0; }
+.share-section-title { font-size: 0.875rem; font-weight: 600; margin: 0 0 2px; }
+.share-section-sub   { font-size: 0.8125rem; color: var(--color-text-muted); margin: 0; line-height: 1.4; }
+
+.bulk-share-option {
+  display: flex; flex-direction: column;
+}
+.bulk-share-option--divider {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
 
 /* ── Multi-select ─────────────────────────────────────────────────────────── */
 

@@ -50,6 +50,7 @@ export default function Library() {
   const [bulkDeleting,  setBulkDeleting]  = useState(false)
   const [bulkSharing,   setBulkSharing]   = useState(false)
   const [showBulkDelete,setShowBulkDelete]= useState(false)
+  const [showBulkShare, setShowBulkShare] = useState(false)
 
   // Last batch — read once from localStorage so user can jump back after navigating away
   const [lastBatch, setLastBatch] = useState(() => {
@@ -179,29 +180,35 @@ export default function Library() {
     }
   }
 
+  // Capture selected IDs at the moment the action is confirmed, not at render time,
+  // so stale React state can't interfere with the in-flight requests.
   async function handleBulkShare(makePublic) {
-    if (selected.size === 0) return
+    const ids = [...selected]
+    if (ids.length === 0) return
     setBulkSharing(true)
     try {
-      await Promise.all([...selected].map(id => shareNote(id, makePublic)))
-      // Refresh so is_public state is accurate on cards
+      // allSettled: don't abort on a single failure
+      await Promise.allSettled(ids.map(id => shareNote(id, makePublic)))
       await fetchNotes()
-    } catch { /* best-effort */ } finally {
+    } finally {
       setBulkSharing(false)
+      setShowBulkShare(false)
     }
   }
 
   async function handleBulkDelete() {
-    if (selected.size === 0) return
+    const ids = [...selected]
+    if (ids.length === 0) return
     setBulkDeleting(true)
     try {
-      await Promise.all([...selected].map(id => deleteNote(id)))
+      await Promise.allSettled(ids.map(id => deleteNote(id)))
       setSelected(new Set())
       setSelectMode(false)
-      setShowBulkDelete(false)
       await fetchNotes()
-    } catch { /* best-effort */ } finally {
+    } finally {
+      // Always close the modal even if some requests failed
       setBulkDeleting(false)
+      setShowBulkDelete(false)
     }
   }
 
@@ -372,21 +379,10 @@ export default function Library() {
           <div className="bulk-action-bar-actions">
             <button
               className="btn btn-secondary btn-sm"
-              disabled={selected.size === 0 || bulkSharing}
-              onClick={() => handleBulkShare(true)}
-              title="Make selected notes publicly shareable"
+              disabled={selected.size === 0}
+              onClick={() => setShowBulkShare(true)}
             >
-              {bulkSharing ? <Loader2 size={13} className="spin" /> : <Globe size={13} />}
-              Share
-            </button>
-            <button
-              className="btn btn-secondary btn-sm"
-              disabled={selected.size === 0 || bulkSharing}
-              onClick={() => handleBulkShare(false)}
-              title="Make selected notes private"
-            >
-              {bulkSharing ? <Loader2 size={13} className="spin" /> : <Lock size={13} />}
-              Unshare
+              <Share2 size={13} /> Share
             </button>
             <button
               className="btn btn-danger btn-sm"
@@ -437,6 +433,16 @@ export default function Library() {
         <NewCourseModal
           onClose={() => setShowNewCourse(false)}
           onCreated={c => { setCourses(prev => [...prev, c]); setShowNewCourse(false) }}
+        />
+      )}
+
+      {showBulkShare && (
+        <BulkShareModal
+          count={selected.size}
+          loading={bulkSharing}
+          onShare={() => handleBulkShare(true)}
+          onUnshare={() => handleBulkShare(false)}
+          onClose={() => setShowBulkShare(false)}
         />
       )}
 
@@ -546,6 +552,70 @@ function NoteCard({ note, inBatchView = false, onUngroup, selectMode = false, se
     </div>
   )
 }
+
+// ── Bulk share modal ──────────────────────────────────────────────────────────
+
+function BulkShareModal({ count, loading, onShare, onUnshare, onClose }) {
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal share-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <Share2 size={18} />
+          <h3>Share {count} note{count !== 1 ? 's' : ''}</h3>
+          <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose} style={{ marginLeft: 'auto' }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Make public */}
+        <div className="bulk-share-option" style={{ marginTop: 20 }}>
+          <div className="share-section-info">
+            <Globe size={15} className="share-icon-public" />
+            <div>
+              <p className="share-section-title">Make public</p>
+              <p className="share-section-sub">
+                Creates a shareable read-only link for each selected note.
+                Links can be found by opening each note individually.
+              </p>
+            </div>
+          </div>
+          <button
+            className="btn btn-secondary btn-sm"
+            style={{ marginTop: 12, alignSelf: 'flex-start' }}
+            onClick={onShare}
+            disabled={loading}
+          >
+            {loading ? <Loader2 size={13} className="spin" /> : <Globe size={13} />}
+            Share {count} note{count !== 1 ? 's' : ''}
+          </button>
+        </div>
+
+        {/* Make private */}
+        <div className="bulk-share-option bulk-share-option--divider">
+          <div className="share-section-info">
+            <Lock size={15} className="share-icon-private" />
+            <div>
+              <p className="share-section-title">Make private</p>
+              <p className="share-section-sub">
+                Disables public access for all selected notes. Existing links will stop working.
+              </p>
+            </div>
+          </div>
+          <button
+            className="btn btn-secondary btn-sm"
+            style={{ marginTop: 12, alignSelf: 'flex-start' }}
+            onClick={onUnshare}
+            disabled={loading}
+          >
+            {loading ? <Loader2 size={13} className="spin" /> : <Lock size={13} />}
+            Unshare {count} note{count !== 1 ? 's' : ''}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 
 // ── Bulk delete confirmation modal ────────────────────────────────────────────
 
