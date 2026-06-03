@@ -4,12 +4,14 @@ import {
   ArrowLeft, Pencil, Trash2, Clock, BookOpen, Tag,
   X, Check, Plus, ChevronDown, ChevronUp, AlertCircle,
   RotateCcw, Sparkles, GraduationCap, Loader2, Save, FileImage,
+  Share2, Copy, Download, Globe, Lock,
 } from 'lucide-react'
 import {
   getNote, updateNote, updateSection, deleteNote,
   addTag, removeTag, listCourses, listTags, createCourse,
   getSectionRevisions, restoreRevision,
   createCorrection, deleteSection, addSection, uploadSectionImage,
+  shareNote,
 } from '../api.js'
 import { getSourceFile } from '../utils/fileStore.js'
 import './NoteEditor.css'
@@ -66,6 +68,11 @@ export default function NoteEditor() {
   // Delete confirmation
   const [showDelete,    setShowDelete]    = useState(false)
   const [deleting,      setDeleting]      = useState(false)
+
+  // Share modal
+  const [showShare,     setShowShare]     = useState(false)
+  const [shareLoading,  setShareLoading]  = useState(false)
+  const [copied,        setCopied]        = useState(false)
 
   // All tag names for suggestions
   const [allTags,       setAllTags]       = useState([])
@@ -324,6 +331,13 @@ export default function NoteEditor() {
           <Link to={`/notes/${id}/study`} className="btn btn-secondary btn-sm">
             <GraduationCap size={14} /> Study tools
           </Link>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => setShowShare(true)}
+            data-tooltip="Share or export"
+          >
+            <Share2 size={14} /> Share
+          </button>
           <button className="btn btn-ghost btn-sm text-danger" onClick={() => setShowDelete(true)}>
             <Trash2 size={14} /> Delete
           </button>
@@ -559,6 +573,43 @@ export default function NoteEditor() {
           deleting={deleting}
           onConfirm={handleDelete}
           onCancel={() => setShowDelete(false)}
+        />
+      )}
+
+      {/* Share / export modal */}
+      {showShare && (
+        <ShareModal
+          note={note}
+          loading={shareLoading}
+          copied={copied}
+          onTogglePublic={async (makePublic) => {
+            setShareLoading(true)
+            try {
+              const updated = await shareNote(id, makePublic)
+              setNote(updated)
+            } catch (e) {
+              setError(e.message ?? 'Could not update sharing.')
+            } finally {
+              setShareLoading(false)
+            }
+          }}
+          onCopy={() => {
+            const url = `${window.location.origin}/share/${note.public_slug}`
+            navigator.clipboard.writeText(url).then(() => {
+              setCopied(true)
+              setTimeout(() => setCopied(false), 2000)
+            })
+          }}
+          onDownload={() => {
+            const md = noteToMarkdown(note)
+            const blob = new Blob([md], { type: 'text/markdown' })
+            const a = document.createElement('a')
+            a.href = URL.createObjectURL(blob)
+            a.download = `${note.title.replace(/[^a-z0-9]/gi, '_')}.md`
+            a.click()
+            URL.revokeObjectURL(a.href)
+          }}
+          onClose={() => setShowShare(false)}
         />
       )}
     </div>
@@ -842,6 +893,95 @@ function CorrectionPrompt({ onSave, onDismiss }) {
     </div>
   )
 }
+
+// ── Share modal ───────────────────────────────────────────────────────────────
+
+function ShareModal({ note, loading, copied, onTogglePublic, onCopy, onDownload, onClose }) {
+  const isPublic = note?.is_public ?? false
+  const shareUrl = isPublic && note?.public_slug
+    ? `${window.location.origin}/share/${note.public_slug}`
+    : null
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal share-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <Share2 size={18} />
+          <h3>Share &amp; export</h3>
+          <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose} style={{ marginLeft: 'auto' }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* ── Share to web ── */}
+        <div className="share-section">
+          <div className="share-section-row">
+            <div className="share-section-info">
+              {isPublic ? <Globe size={15} className="share-icon-public" /> : <Lock size={15} className="share-icon-private" />}
+              <div>
+                <p className="share-section-title">{isPublic ? 'Anyone with the link can view' : 'Only you can view this note'}</p>
+                <p className="share-section-sub">
+                  {isPublic
+                    ? 'The shared page is read-only — no editing or account needed.'
+                    : 'Enable sharing to create a public, view-only link.'}
+                </p>
+              </div>
+            </div>
+            <button
+              className={`share-toggle${isPublic ? ' share-toggle--on' : ''}`}
+              onClick={() => onTogglePublic(!isPublic)}
+              disabled={loading}
+              aria-label={isPublic ? 'Disable sharing' : 'Enable sharing'}
+            >
+              {loading ? <Loader2 size={13} className="spin" /> : null}
+              <span className="share-toggle-knob" />
+            </button>
+          </div>
+
+          {isPublic && shareUrl && (
+            <div className="share-url-row">
+              <input className="share-url-input" readOnly value={shareUrl} />
+              <button className="btn btn-secondary btn-sm" onClick={onCopy}>
+                {copied ? <><Check size={13} /> Copied!</> : <><Copy size={13} /> Copy link</>}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Download ── */}
+        <div className="share-section share-section--download">
+          <p className="share-section-title" style={{ marginBottom: 4 }}>Download</p>
+          <p className="share-section-sub" style={{ marginBottom: 10 }}>
+            Save this note as a Markdown file you can open in any text editor.
+          </p>
+          <button className="btn btn-secondary btn-sm" onClick={onDownload}>
+            <Download size={13} /> Download as Markdown
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+// ── Convert note sections → Markdown string ───────────────────────────────────
+
+function noteToMarkdown(note) {
+  const lines = [`# ${note.title}`, '']
+  for (const section of note.sections ?? []) {
+    if (section.heading) lines.push(`## ${section.heading}`, '')
+    if (section.content_type === 'bullet_list') {
+      section.content.split('\n').forEach(line => lines.push(line.startsWith('-') || line.startsWith('•') ? line : `- ${line}`))
+    } else if (section.content_type === 'equation') {
+      lines.push(`$$`, section.content, `$$`)
+    } else {
+      lines.push(section.content)
+    }
+    lines.push('')
+  }
+  return lines.join('\n')
+}
+
 
 // ── Delete modal ──────────────────────────────────────────────────────────────
 

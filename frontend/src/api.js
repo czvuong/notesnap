@@ -228,6 +228,15 @@ export function deleteNote(id)        { return del(`/api/notes/${id}`) }
 export function addTag(noteId, name)       { return post(`/api/notes/${noteId}/tags`, { name }) }
 export function removeTag(noteId, tagId)   { return del(`/api/notes/${noteId}/tags/${tagId}`) }
 
+/** Toggle public sharing for a note. */
+export function shareNote(id, isPublic)    { return patch(`/api/notes/${id}/share`, { is_public: isPublic }) }
+
+/**
+ * Fetch a publicly shared note by its slug. No authentication required.
+ * Used by the public /share/:slug page.
+ */
+export function getPublicNote(slug)        { return get(`/api/notes/public/${slug}`) }
+
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 

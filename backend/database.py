@@ -66,6 +66,11 @@ def _run_migrations():
         # Added: per-user theme preference (violet / blue / sage / dark)
         "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS "
         "theme VARCHAR(20) NOT NULL DEFAULT 'violet'",
+        # Added: public sharing — is_public flag and URL slug per note
+        "ALTER TABLE notes ADD COLUMN IF NOT EXISTS "
+        "is_public BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE notes ADD COLUMN IF NOT EXISTS "
+        "public_slug VARCHAR(32) UNIQUE",
     ]
     with engine.connect() as conn:
         for sql in migrations:

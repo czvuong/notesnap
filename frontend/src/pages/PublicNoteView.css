@@ -1,0 +1,187 @@
+/* ── Public note view — /share/:slug ──────────────────────────────────────── */
+
+.public-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+.public-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.public-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+.public-brand:hover { opacity: 0.8; }
+
+.public-badge {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+/* ── Main content ─────────────────────────────────────────────────────────── */
+
+.public-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px;
+}
+
+.public-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-muted);
+  padding-top: 80px;
+}
+
+.public-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-muted);
+  padding-top: 80px;
+  text-align: center;
+}
+.public-error h2 { font-size: 1.1rem; color: var(--color-text); margin: 0; }
+
+/* ── Note layout ─────────────────────────────────────────────────────────── */
+
+.public-note {
+  width: 100%;
+  max-width: 740px;
+}
+
+.public-note-title {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0 0 8px;
+  color: var(--color-text);
+}
+
+.public-note-meta {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0 0 36px;
+}
+
+/* ── Sections ─────────────────────────────────────────────────────────────── */
+
+.public-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.public-section {
+  padding: 20px 24px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-xl);
+}
+
+.public-section-heading {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+  color: var(--color-text);
+}
+
+.public-section-text {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-text);
+  white-space: pre-wrap;
+}
+
+.public-section-bullets {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-text);
+}
+.public-section-bullets li { margin-bottom: 4px; }
+
+.public-section-equation {
+  font-size: 1.05rem;
+  text-align: center;
+  padding: 12px 0;
+  overflow-x: auto;
+}
+
+.public-section-diagram {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+.public-section-type-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-muted);
+  margin: 0 0 8px;
+}
+
+.public-section-image {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  display: block;
+  margin: 0 auto;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+
+.public-footer {
+  text-align: center;
+  padding: 20px 24px;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+.public-footer a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+.public-footer a:hover { text-decoration: underline; }
+
+/* ── Spin animation ──────────────────────────────────────────────────────── */
+.spin { animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Mobile ──────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .public-main { padding: 24px 16px; }
+  .public-note-title { font-size: 1.5rem; }
+  .public-section { padding: 14px 16px; }
+  .public-badge { display: none; }
+}

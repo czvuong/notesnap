@@ -16,16 +16,17 @@ import { SignedIn, SignedOut, RedirectToSignIn, useAuth, useUser, UserButton } f
 import { useEffect, useState } from 'react'
 import { useTheme } from './hooks/useTheme.js'
 import { setTokenGetter, getPreferences } from './api.js'
-import Dashboard    from './pages/Dashboard.jsx'
-import UploadPage   from './pages/Upload.jsx'
-import BatchUpload  from './pages/BatchUpload.jsx'
-import NoteEditor   from './pages/NoteEditor.jsx'
-import Library      from './pages/Library.jsx'
-import CourseDetail from './pages/CourseDetail.jsx'
-import StudyTools   from './pages/StudyTools.jsx'
-import StudyHub     from './pages/StudyHub.jsx'
-import TrashPage    from './pages/Trash.jsx'
-import Preferences  from './pages/Preferences.jsx'
+import Dashboard       from './pages/Dashboard.jsx'
+import UploadPage      from './pages/Upload.jsx'
+import BatchUpload     from './pages/BatchUpload.jsx'
+import NoteEditor      from './pages/NoteEditor.jsx'
+import Library         from './pages/Library.jsx'
+import CourseDetail    from './pages/CourseDetail.jsx'
+import StudyTools      from './pages/StudyTools.jsx'
+import StudyHub        from './pages/StudyHub.jsx'
+import TrashPage       from './pages/Trash.jsx'
+import Preferences     from './pages/Preferences.jsx'
+import PublicNoteView  from './pages/PublicNoteView.jsx'
 import './App.css'
 
 /**
@@ -57,23 +58,26 @@ function ThemeSyncer({ userId }) {
   return null
 }
 
-export default function App() {
-  // Initialise theme on mount — reads localStorage and sets data-theme on <html>.
-  // Scoped by userId so each Clerk account keeps its own theme.
+/**
+ * AuthenticatedLayout — renders the full app shell (sidebar + routes) for
+ * signed-in users, and redirects unauthenticated visitors to Clerk's sign-in.
+ * Extracted so that the public /share/:slug route can live OUTSIDE this wrapper.
+ */
+function AuthenticatedLayout() {
   const { user } = useUser()
   useTheme(user?.id ?? null)
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <BrowserRouter>
+    <>
       {/* Always sync the Clerk token into api.js when signed in */}
       <SignedIn>
         <AuthTokenSyncer />
         <ThemeSyncer userId={user?.id ?? null} />
       </SignedIn>
 
-      {/* Redirect to Clerk's hosted sign-in page if not authenticated */}
+      {/* Redirect unauthenticated visitors to Clerk sign-in */}
       <SignedOut>
         <RedirectToSignIn />
       </SignedOut>
@@ -121,6 +125,23 @@ export default function App() {
           </main>
         </div>
       </SignedIn>
+    </>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/*
+          Public share page — accessible WITHOUT authentication.
+          Must be declared BEFORE the catch-all authenticated route.
+        */}
+        <Route path="/share/:slug" element={<PublicNoteView />} />
+
+        {/* Everything else requires a Clerk sign-in */}
+        <Route path="/*" element={<AuthenticatedLayout />} />
+      </Routes>
     </BrowserRouter>
   )
 }

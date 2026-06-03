@@ -150,8 +150,24 @@ class NoteDetailOut(_Base):
     ai_model_used: str
     tags: list[TagOut] = []
     sections: list[SectionOut] = []
+    is_public: bool = False
+    public_slug: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
+
+# ── Public sharing ────────────────────────────────────────────────────────────
+
+class NoteShareRequest(_Base):
+    is_public: bool
+
+class PublicNoteOut(_Base):
+    """Read-only note data returned for public/unauthenticated viewers."""
+    id: str
+    title: str
+    extraction_mode: str
+    sections: list[SectionOut] = []
+    created_at: datetime
 
 
 # ── Extraction ────────────────────────────────────────────────────────────────

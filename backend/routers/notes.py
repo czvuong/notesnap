@@ -3,11 +3,17 @@ routers/notes.py — /api/notes
 
 All routes require authentication. Notes are scoped to the current user —
 no route can read or modify another user's notes.
+
+Public sharing:
+  PATCH /{note_id}/share   — toggle is_public, generate/clear slug (auth required)
+  GET   /public/{slug}     — read-only view, NO auth required
+  is_public and public_slug are stored via raw SQL (same resilience pattern as theme).
 """
 
+import secrets
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 from sqlalchemy.orm import Session
 
 from auth import get_current_user
@@ -20,7 +26,9 @@ from schemas import (
     NoteDetailOut,
     NoteListOut,
     NoteSummaryOut,
+    NoteShareRequest,
     NoteUpdate,
+    PublicNoteOut,
     SoftDeleteOut,
     TagOut,
     CourseOut,
@@ -79,6 +87,23 @@ def _build_summary(note: Note) -> NoteSummaryOut:
         created_at=note.created_at,
         updated_at=note.updated_at,
     )
+
+def _get_sharing_status(db: Session, note_id: str) -> dict:
+    """
+    Read is_public / public_slug via raw SQL so we degrade gracefully if
+    the columns don't exist yet (migration still pending).
+    """
+    try:
+        row = db.execute(
+            text("SELECT is_public, public_slug FROM notes WHERE id = :id"),
+            {"id": note_id},
+        ).first()
+        if row:
+            return {"is_public": bool(row[0]), "public_slug": row[1]}
+    except Exception:
+        db.rollback()
+    return {"is_public": False, "public_slug": None}
+
 
 def _build_detail(note: Note) -> NoteDetailOut:
     active_sections = sorted(
@@ -222,13 +247,67 @@ def create_note(
     return _build_detail(note)
 
 
+@router.get("/public/{slug}", response_model=PublicNoteOut)
+def get_public_note(slug: str, db: Session = Depends(get_db)):
+    """
+    Unauthenticated read-only endpoint. Returns the note only if
+    is_public = TRUE and the note has not been soft-deleted.
+    """
+    try:
+        row = db.execute(
+            text(
+                "SELECT id FROM notes "
+                "WHERE public_slug = :slug AND is_public = TRUE AND deleted_at IS NULL"
+            ),
+            {"slug": slug},
+        ).first()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=404, detail="Note not found.")
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Note not found.")
+
+    note_id = row[0]
+    note = db.query(Note).filter(Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found.")
+
+    active_sections = sorted(
+        [s for s in note.sections if s.deleted_at is None],
+        key=lambda s: s.section_order,
+    )
+    return PublicNoteOut(
+        id=note.id,
+        title=note.title,
+        extraction_mode=note.extraction_mode,
+        sections=[
+            SectionOut(
+                id=s.id,
+                note_id=s.note_id,
+                section_order=s.section_order,
+                heading=s.heading,
+                content_type=s.content_type,
+                content=s.content,
+                created_at=s.created_at,
+                updated_at=s.updated_at,
+            )
+            for s in active_sections
+        ],
+        created_at=note.created_at,
+    )
+
+
 @router.get("/{note_id}", response_model=NoteDetailOut)
 def get_note(
     note_id: str,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user),
 ):
-    return _build_detail(_note_or_404(db, note_id, current_user))
+    note = _note_or_404(db, note_id, current_user)
+    detail = _build_detail(note)
+    sharing = _get_sharing_status(db, note_id)
+    return detail.model_copy(update=sharing)
 
 
 @router.patch("/{note_id}", response_model=NoteDetailOut)
@@ -258,7 +337,62 @@ def update_note(
     note.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(note)
-    return _build_detail(note)
+    detail = _build_detail(note)
+    sharing = _get_sharing_status(db, note_id)
+    return detail.model_copy(update=sharing)
+
+
+@router.patch("/{note_id}/share", response_model=NoteDetailOut)
+def share_note(
+    note_id: str,
+    body: NoteShareRequest,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    """
+    Toggle public sharing for a note.
+    - is_public=True  → generate a slug if one doesn't exist yet, mark public
+    - is_public=False → mark private (slug is preserved so the same URL can be
+                        re-enabled later, but the public endpoint will 404)
+    """
+    note = _note_or_404(db, note_id, current_user)
+
+    try:
+        row = db.execute(
+            text("SELECT public_slug FROM notes WHERE id = :id"),
+            {"id": note_id},
+        ).first()
+        existing_slug = row[0] if row else None
+    except Exception:
+        db.rollback()
+        existing_slug = None
+
+    if body.is_public:
+        slug = existing_slug or secrets.token_urlsafe(12)
+        try:
+            db.execute(
+                text(
+                    "UPDATE notes SET is_public = TRUE, public_slug = :slug "
+                    "WHERE id = :id"
+                ),
+                {"slug": slug, "id": note_id},
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+    else:
+        try:
+            db.execute(
+                text("UPDATE notes SET is_public = FALSE WHERE id = :id"),
+                {"id": note_id},
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+
+    detail = _build_detail(note)
+    sharing = _get_sharing_status(db, note_id)
+    return detail.model_copy(update=sharing)
 
 
 @router.delete("/{note_id}", response_model=SoftDeleteOut)
