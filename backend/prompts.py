@@ -278,20 +278,17 @@ Guidelines:
 
 def build_course_summary_prompt(all_notes_text: str, course_name: str) -> str:
     """
-    Given the combined text of all notes in a course, generate a summary.
+    Given the combined text of all notes in a course, generate a short overview.
     """
-    return f"""You are a study assistant creating a pre-exam summary sheet.
+    return f"""You are a study assistant writing a brief course overview.
 
-Summarize the following notes from the course "{course_name}" into a concise,
-well-organized summary sheet. This should be useful for a student reviewing
-before an exam.
+Based on the following notes from the course "{course_name}", write a short
+"about this course" description — 2 to 4 sentences, 50–80 words. It should
+explain what the course covers at a high level, as if introducing it to a
+new student. Do NOT list exam topics, formulas, or bullet points. Write in
+plain prose only.
 
 Notes:
 {all_notes_text}
 
-Respond with a plain text summary (NOT JSON). Use clear headings and bullet
-points. Aim for 300–600 words. Cover:
-- The main topics and themes
-- Key definitions and formulas
-- Important relationships between concepts
-- Anything that appeared repeatedly across multiple lectures"""
+Respond with only the plain text overview. No headings, no bullets, no markdown."""

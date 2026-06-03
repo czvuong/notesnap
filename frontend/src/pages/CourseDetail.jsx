@@ -3,11 +3,11 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   BookOpen, ArrowLeft, Pencil, Trash2, Check, X,
   FileText, Sparkles, Plus, Loader2, Calendar,
-  GraduationCap, AlertCircle,
+  GraduationCap, AlertCircle, Layers, HelpCircle,
 } from 'lucide-react'
 import {
   getCourse, updateCourse, deleteCourse,
-  listNotes, generateCourseSummary,
+  listNotes, generateCourseSummary, generateStudySession,
 } from '../api.js'
 import './CourseDetail.css'
 
@@ -22,6 +22,77 @@ function formatDate(iso) {
   if (days === 1) return 'Yesterday'
   if (days < 7)  return `${days}d ago`
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+/**
+ * Render a short segment of text with **bold** and *italic* handled inline.
+ */
+function renderInline(text, key) {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
+  return (
+    <span key={key}>
+      {parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**'))
+          return <strong key={i}>{part.slice(2, -2)}</strong>
+        if (part.startsWith('*') && part.endsWith('*'))
+          return <em key={i}>{part.slice(1, -1)}</em>
+        return part
+      })}
+    </span>
+  )
+}
+
+/**
+ * Convert a markdown string into React elements, handling the most common
+ * patterns produced by the AI: headings, bullets, bold/italic, hr, paragraphs.
+ */
+function renderMarkdown(text) {
+  if (!text) return null
+  const lines    = text.split('\n')
+  const elements = []
+  let bulletBuffer = []
+  let keyCounter   = 0
+  const k = () => keyCounter++
+
+  function flushBullets() {
+    if (bulletBuffer.length === 0) return
+    elements.push(
+      <ul key={k()} className="course-md-list">
+        {bulletBuffer.map((item, i) => <li key={i}>{item}</li>)}
+      </ul>
+    )
+    bulletBuffer = []
+  }
+
+  for (const line of lines) {
+    const t = line.trim()
+
+    if (!t) {
+      flushBullets()
+      continue
+    }
+
+    if (t.startsWith('### ')) {
+      flushBullets()
+      elements.push(<h4 key={k()} className="course-md-h3">{renderInline(t.slice(4), 0)}</h4>)
+    } else if (t.startsWith('## ')) {
+      flushBullets()
+      elements.push(<h3 key={k()} className="course-md-h2">{renderInline(t.slice(3), 0)}</h3>)
+    } else if (t.startsWith('# ')) {
+      flushBullets()
+      elements.push(<h2 key={k()} className="course-md-h1">{renderInline(t.slice(2), 0)}</h2>)
+    } else if (t.startsWith('- ') || t.startsWith('* ')) {
+      bulletBuffer.push(renderInline(t.slice(2), k()))
+    } else if (t === '---') {
+      flushBullets()
+      elements.push(<hr key={k()} className="course-md-hr" />)
+    } else {
+      flushBullets()
+      elements.push(<p key={k()} className="course-md-p">{renderInline(t, 0)}</p>)
+    }
+  }
+  flushBullets()
+  return elements
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -40,10 +111,17 @@ export default function CourseDetail() {
   const [nameDraft, setNameDraft] = useState('')
   const nameRef = useRef(null)
 
-  // Course summary (AI)
-  const [summary,         setSummary]         = useState(null)
+  // Course summary (AI) — persisted in localStorage
+  const [summary,         setSummary]         = useState(() => {
+    try { return localStorage.getItem(`notesnap_summary_${id}`) ?? null }
+    catch { return null }
+  })
   const [summaryLoading,  setSummaryLoading]  = useState(false)
   const [summaryError,    setSummaryError]    = useState(null)
+
+  // Study tool generation
+  const [generatingFlashcards, setGeneratingFlashcards] = useState(false)
+  const [generatingQuestions,  setGeneratingQuestions]  = useState(false)
 
   // Delete modal
   const [showDelete, setShowDelete] = useState(false)
@@ -68,6 +146,12 @@ export default function CourseDetail() {
   useEffect(() => {
     if (editName) nameRef.current?.focus()
   }, [editName])
+
+  // ── Computed totals from notes ────────────────────────────────────────────
+
+  const flashcardTotal = notes.reduce((sum, n) => sum + (n.flashcard_count ?? 0), 0)
+  const questionTotal  = notes.reduce((sum, n) => sum + (n.question_count  ?? 0), 0)
+  const noteIds        = notes.map(n => n.id)
 
   // ── Rename ────────────────────────────────────────────────────────────────
 
@@ -99,7 +183,7 @@ export default function CourseDetail() {
     setDeleting(true)
     try {
       await deleteCourse(id)
-      navigate('/', { replace: true })
+      navigate('/courses', { replace: true })
     } catch (e) {
       alert(e.message ?? 'Delete failed.')
       setDeleting(false)
@@ -114,11 +198,39 @@ export default function CourseDetail() {
     setSummaryError(null)
     try {
       const result = await generateCourseSummary(id)
-      setSummary(result.summary ?? result.content ?? JSON.stringify(result))
+      const text   = result.summary ?? result.content ?? JSON.stringify(result)
+      setSummary(text)
+      try { localStorage.setItem(`notesnap_summary_${id}`, text) } catch { /* quota */ }
     } catch (e) {
       setSummaryError(e.message ?? 'Could not generate summary.')
     } finally {
       setSummaryLoading(false)
+    }
+  }
+
+  // ── Study tool generation ─────────────────────────────────────────────────
+
+  async function handleGenerateFlashcards() {
+    if (noteIds.length === 0) return
+    setGeneratingFlashcards(true)
+    try {
+      await generateStudySession(noteIds, 'flashcards')
+      navigate('/study')
+    } catch (e) {
+      alert(e.message ?? 'Could not generate flashcards.')
+      setGeneratingFlashcards(false)
+    }
+  }
+
+  async function handleGenerateQuestions() {
+    if (noteIds.length === 0) return
+    setGeneratingQuestions(true)
+    try {
+      await generateStudySession(noteIds, 'practice_questions')
+      navigate('/study')
+    } catch (e) {
+      alert(e.message ?? 'Could not generate practice questions.')
+      setGeneratingQuestions(false)
     }
   }
 
@@ -140,7 +252,7 @@ export default function CourseDetail() {
         <div className="banner banner-error" style={{ marginTop: 24 }}>
           {error ?? 'Course not found.'}
         </div>
-        <Link to="/" className="btn btn-ghost btn-sm" style={{ marginTop: 12 }}>
+        <Link to="/courses" className="btn btn-ghost btn-sm" style={{ marginTop: 12 }}>
           <ArrowLeft size={14} /> Back
         </Link>
       </div>
@@ -154,8 +266,8 @@ export default function CourseDetail() {
       {/* ── Header ── */}
       <div className="page-header">
         <div className="page-header-left">
-          <Link to="/" className="btn btn-ghost btn-sm back-btn">
-            <ArrowLeft size={14} /> Dashboard
+          <Link to="/courses" className="btn btn-ghost btn-sm back-btn">
+            <ArrowLeft size={14} /> Courses
           </Link>
           <div className="course-title-row">
             {editName ? (
@@ -220,7 +332,7 @@ export default function CourseDetail() {
         <div className="course-summary-header">
           <div className="course-summary-title">
             <GraduationCap size={15} />
-            <h2>Course summary</h2>
+            <h2>About this course</h2>
           </div>
           <button
             className="btn btn-secondary btn-sm"
@@ -229,7 +341,7 @@ export default function CourseDetail() {
           >
             {summaryLoading
               ? <><Loader2 size={13} className="spin" /> Generating…</>
-              : <><Sparkles size={13} /> Generate</>}
+              : <><Sparkles size={13} /> {summary ? 'Regenerate' : 'Generate'}</>}
           </button>
         </div>
 
@@ -240,17 +352,127 @@ export default function CourseDetail() {
         )}
 
         {summary ? (
-          <div className="course-summary-body">
-            {summary.split('\n').filter(Boolean).map((line, i) => (
-              <p key={i}>{line}</p>
-            ))}
+          <div className="course-summary-body course-md">
+            {renderMarkdown(summary)}
           </div>
         ) : (
           <p className="text-muted text-sm">
             {notes.length === 0
               ? 'Add notes to this course to generate a summary.'
-              : 'Click Generate to create an AI-powered summary of all notes in this course.'}
+              : 'Click Generate to create a short overview of what this course covers.'}
           </p>
+        )}
+      </section>
+
+      {/* ── Flashcards ── */}
+      <section className="course-study-section">
+        <div className="course-study-header">
+          <div className="course-study-title">
+            <Layers size={15} />
+            <h2>Flashcards</h2>
+          </div>
+          {flashcardTotal > 0 && (
+            <span className="badge badge-primary">
+              {flashcardTotal} card{flashcardTotal !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+
+        {flashcardTotal > 0 ? (
+          <div className="course-study-body">
+            <p className="text-sm text-muted">
+              {flashcardTotal} flashcard{flashcardTotal !== 1 ? 's' : ''} across {notes.length} note{notes.length !== 1 ? 's' : ''}.
+            </p>
+            <div className="course-study-actions">
+              <Link to="/study" className="btn btn-secondary btn-sm">
+                Study flashcards
+              </Link>
+              <button
+                className="btn btn-ghost btn-sm"
+                disabled={generatingFlashcards || notes.length === 0}
+                onClick={handleGenerateFlashcards}
+              >
+                {generatingFlashcards
+                  ? <><Loader2 size={13} className="spin" /> Generating…</>
+                  : <><Sparkles size={13} /> Generate more</>}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="course-study-empty">
+            <p className="text-sm text-muted">
+              {notes.length === 0
+                ? 'Add notes to this course to create flashcards.'
+                : 'No flashcards yet for this course.'}
+            </p>
+            {notes.length > 0 && (
+              <button
+                className="btn btn-primary btn-sm"
+                disabled={generatingFlashcards}
+                onClick={handleGenerateFlashcards}
+              >
+                {generatingFlashcards
+                  ? <><Loader2 size={13} className="spin" /> Generating…</>
+                  : <><Sparkles size={13} /> Create flashcards</>}
+              </button>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* ── Practice Questions ── */}
+      <section className="course-study-section">
+        <div className="course-study-header">
+          <div className="course-study-title">
+            <HelpCircle size={15} />
+            <h2>Practice questions</h2>
+          </div>
+          {questionTotal > 0 && (
+            <span className="badge badge-primary">
+              {questionTotal} question{questionTotal !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+
+        {questionTotal > 0 ? (
+          <div className="course-study-body">
+            <p className="text-sm text-muted">
+              {questionTotal} practice question{questionTotal !== 1 ? 's' : ''} across {notes.length} note{notes.length !== 1 ? 's' : ''}.
+            </p>
+            <div className="course-study-actions">
+              <Link to="/study" className="btn btn-secondary btn-sm">
+                Practice now
+              </Link>
+              <button
+                className="btn btn-ghost btn-sm"
+                disabled={generatingQuestions || notes.length === 0}
+                onClick={handleGenerateQuestions}
+              >
+                {generatingQuestions
+                  ? <><Loader2 size={13} className="spin" /> Generating…</>
+                  : <><Sparkles size={13} /> Generate more</>}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="course-study-empty">
+            <p className="text-sm text-muted">
+              {notes.length === 0
+                ? 'Add notes to this course to create practice questions.'
+                : 'No practice questions yet for this course.'}
+            </p>
+            {notes.length > 0 && (
+              <button
+                className="btn btn-primary btn-sm"
+                disabled={generatingQuestions}
+                onClick={handleGenerateQuestions}
+              >
+                {generatingQuestions
+                  ? <><Loader2 size={13} className="spin" /> Generating…</>
+                  : <><Sparkles size={13} /> Create practice questions</>}
+              </button>
+            )}
+          </div>
         )}
       </section>
 

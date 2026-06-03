@@ -21,6 +21,7 @@ import UploadPage      from './pages/Upload.jsx'
 import BatchUpload     from './pages/BatchUpload.jsx'
 import NoteEditor      from './pages/NoteEditor.jsx'
 import Library         from './pages/Library.jsx'
+import CoursesPage     from './pages/Courses.jsx'
 import CourseDetail    from './pages/CourseDetail.jsx'
 import StudyTools      from './pages/StudyTools.jsx'
 import StudyHub        from './pages/StudyHub.jsx'
@@ -117,6 +118,7 @@ function AuthenticatedLayout() {
               <Route path="/notes/:id/study" element={<StudyTools />} />
               <Route path="/study"         element={<StudyHub />}   />
               <Route path="/library"       element={<Library />}    />
+              <Route path="/courses"       element={<CoursesPage />} />
               <Route path="/courses/:id"   element={<CourseDetail />} />
               <Route path="/trash"         element={<TrashPage />}  />
               <Route path="/settings"      element={<Preferences />} />
@@ -151,6 +153,7 @@ const NAV_ITEMS = [
   { to: '/upload',  label: 'Upload',       Icon: Upload },
   { to: '/batch',   label: 'Batch Upload', Icon: Layers },
   { to: '/library', label: 'Library',      Icon: BookOpen },
+  { to: '/courses', label: 'Courses',      Icon: BookMarked },
   { to: '/study',   label: 'Study Tools',  Icon: GraduationCap },
   { to: '/trash',   label: 'Trash',        Icon: Trash2 },
   { to: '/settings',label: 'Preferences',  Icon: Settings },
