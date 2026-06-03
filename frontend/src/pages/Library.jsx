@@ -237,13 +237,18 @@ export default function Library() {
       for (const note of notes) {
         const md = noteToMarkdown(note)
         const blob = new Blob([md], { type: 'text/markdown' })
+        const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
-        a.href = URL.createObjectURL(blob)
+        a.href = url
         a.download = `${note.title.replace(/[^a-z0-9]/gi, '_')}.md`
+        // Must be in the DOM for Firefox; some Chromium versions also need it
+        document.body.appendChild(a)
         a.click()
-        URL.revokeObjectURL(a.href)
-        // Small gap so the browser doesn't block multiple simultaneous downloads
-        await new Promise(resolve => setTimeout(resolve, 200))
+        document.body.removeChild(a)
+        // Revoke well after the click so the browser has time to start the download
+        setTimeout(() => URL.revokeObjectURL(url), 2000)
+        // Wait between files — browsers silently drop rapid consecutive downloads
+        await new Promise(resolve => setTimeout(resolve, 600))
       }
     } finally {
       setDownloading(false)
