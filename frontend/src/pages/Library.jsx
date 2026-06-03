@@ -4,8 +4,9 @@ import {
   Search, FileText, Sparkles, BookOpen,
   Tag, Calendar, ChevronLeft, ChevronRight, X, Plus,
   Loader2, Inbox, Layers, Unlink,
+  CheckSquare, Square, Share2, Trash2, Globe, Lock,
 } from 'lucide-react'
-import { listNotes, listCourses, listTags, createCourse, ungroupNote } from '../api.js'
+import { listNotes, listCourses, listTags, createCourse, ungroupNote, shareNote, deleteNote } from '../api.js'
 import './Library.css'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -42,6 +43,13 @@ export default function Library() {
 
   // New course modal
   const [showNewCourse, setShowNewCourse] = useState(false)
+
+  // Multi-select
+  const [selectMode,    setSelectMode]    = useState(false)
+  const [selected,      setSelected]      = useState(new Set()) // Set of note IDs
+  const [bulkDeleting,  setBulkDeleting]  = useState(false)
+  const [bulkSharing,   setBulkSharing]   = useState(false)
+  const [showBulkDelete,setShowBulkDelete]= useState(false)
 
   // Last batch — read once from localStorage so user can jump back after navigating away
   const [lastBatch, setLastBatch] = useState(() => {
@@ -148,6 +156,55 @@ export default function Library() {
     } catch { /* ignore */ }
   }
 
+  // ── Multi-select handlers ─────────────────────────────────────────────────
+
+  function toggleSelectMode() {
+    setSelectMode(s => !s)
+    setSelected(new Set())
+  }
+
+  function toggleNote(id) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (selected.size === notes.length) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(notes.map(n => n.id)))
+    }
+  }
+
+  async function handleBulkShare(makePublic) {
+    if (selected.size === 0) return
+    setBulkSharing(true)
+    try {
+      await Promise.all([...selected].map(id => shareNote(id, makePublic)))
+      // Refresh so is_public state is accurate on cards
+      await fetchNotes()
+    } catch { /* best-effort */ } finally {
+      setBulkSharing(false)
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (selected.size === 0) return
+    setBulkDeleting(true)
+    try {
+      await Promise.all([...selected].map(id => deleteNote(id)))
+      setSelected(new Set())
+      setSelectMode(false)
+      setShowBulkDelete(false)
+      await fetchNotes()
+    } catch { /* best-effort */ } finally {
+      setBulkDeleting(false)
+    }
+  }
+
   const totalPages  = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const hasFilters  = q || courseId || tag || mode || batchId || sort !== 'newest'
   const filterLabel = [
@@ -183,6 +240,12 @@ export default function Library() {
               View last batch ({lastBatch.succeeded}/{lastBatch.total})
             </button>
           )}
+          <button
+            className={`btn${selectMode ? ' btn-primary' : ' btn-secondary'}`}
+            onClick={toggleSelectMode}
+          >
+            <CheckSquare size={14} /> {selectMode ? 'Cancel' : 'Select'}
+          </button>
           <Link to="/upload" className="btn btn-primary">
             <Plus size={15} /> New note
           </Link>
@@ -292,6 +355,50 @@ export default function Library() {
         </p>
       )}
 
+      {/* ── Bulk action bar — shown when selectMode is on ── */}
+      {selectMode && (
+        <div className="bulk-action-bar">
+          <button className="btn btn-ghost btn-sm bulk-select-all" onClick={toggleSelectAll}>
+            {selected.size === notes.length && notes.length > 0
+              ? <CheckSquare size={14} />
+              : <Square size={14} />}
+            {selected.size === 0
+              ? 'Select all'
+              : selected.size === notes.length
+                ? 'Deselect all'
+                : `${selected.size} selected`}
+          </button>
+
+          <div className="bulk-action-bar-actions">
+            <button
+              className="btn btn-secondary btn-sm"
+              disabled={selected.size === 0 || bulkSharing}
+              onClick={() => handleBulkShare(true)}
+              title="Make selected notes publicly shareable"
+            >
+              {bulkSharing ? <Loader2 size={13} className="spin" /> : <Globe size={13} />}
+              Share
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              disabled={selected.size === 0 || bulkSharing}
+              onClick={() => handleBulkShare(false)}
+              title="Make selected notes private"
+            >
+              {bulkSharing ? <Loader2 size={13} className="spin" /> : <Lock size={13} />}
+              Unshare
+            </button>
+            <button
+              className="btn btn-danger btn-sm"
+              disabled={selected.size === 0 || bulkDeleting}
+              onClick={() => setShowBulkDelete(true)}
+            >
+              <Trash2 size={13} /> Delete{selected.size > 0 ? ` (${selected.size})` : ''}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Main content ── */}
       {loading ? (
         <div className="library-loading">
@@ -313,6 +420,9 @@ export default function Library() {
                 note={note}
                 inBatchView={!!batchId}
                 onUngroup={() => handleUngroup(note.id)}
+                selectMode={selectMode}
+                selected={selected.has(note.id)}
+                onToggleSelect={() => toggleNote(note.id)}
               />
             ))}
           </div>
@@ -329,26 +439,55 @@ export default function Library() {
           onCreated={c => { setCourses(prev => [...prev, c]); setShowNewCourse(false) }}
         />
       )}
+
+      {showBulkDelete && (
+        <BulkDeleteModal
+          count={selected.size}
+          deleting={bulkDeleting}
+          onConfirm={handleBulkDelete}
+          onCancel={() => setShowBulkDelete(false)}
+        />
+      )}
     </div>
   )
 }
 
 // ── Note card ─────────────────────────────────────────────────────────────────
 
-function NoteCard({ note, inBatchView = false, onUngroup }) {
+function NoteCard({ note, inBatchView = false, onUngroup, selectMode = false, selected = false, onToggleSelect }) {
   const sectionCount = note.sections?.length ?? note.section_count ?? 0
   const navigate = useNavigate()
 
+  function handleCardClick(e) {
+    if (selectMode) {
+      e.preventDefault()
+      onToggleSelect?.()
+    }
+  }
+
   return (
-    <div className={`note-card-wrap${note.batch_id ? ' note-card-wrap--batched' : ''}`}>
-      <Link to={`/notes/${note.id}`} className="note-card">
+    <div
+      className={`note-card-wrap${note.batch_id ? ' note-card-wrap--batched' : ''}${selectMode ? ' note-card-wrap--selectable' : ''}${selected ? ' note-card-wrap--selected' : ''}`}
+    >
+      {/* Checkbox overlay — only shown in select mode */}
+      {selectMode && (
+        <button
+          className="note-card-checkbox"
+          onClick={e => { e.preventDefault(); onToggleSelect?.() }}
+          aria-label={selected ? 'Deselect note' : 'Select note'}
+        >
+          {selected ? <CheckSquare size={18} /> : <Square size={18} />}
+        </button>
+      )}
+
+      <Link to={`/notes/${note.id}`} className="note-card" onClick={handleCardClick}>
         <div className="note-card-top">
           <div className="note-card-icon">
             {note.extraction_mode === 'study_guide'
               ? <Sparkles size={18} />
               : <FileText size={18} />}
           </div>
-          {note.batch_id && !inBatchView && (
+          {note.batch_id && !inBatchView && !selectMode && (
             <button
               className="badge badge-gray note-batch-badge"
               title="View all notes from this batch"
@@ -394,8 +533,8 @@ function NoteCard({ note, inBatchView = false, onUngroup }) {
         )}
       </Link>
 
-      {/* Ungroup button — visible only in batch view */}
-      {inBatchView && note.batch_id && (
+      {/* Ungroup button — visible only in batch view, hidden during select */}
+      {inBatchView && note.batch_id && !selectMode && (
         <button
           className="note-ungroup-btn"
           onClick={e => { e.preventDefault(); onUngroup?.() }}
@@ -407,6 +546,34 @@ function NoteCard({ note, inBatchView = false, onUngroup }) {
     </div>
   )
 }
+
+// ── Bulk delete confirmation modal ────────────────────────────────────────────
+
+function BulkDeleteModal({ count, deleting, onConfirm, onCancel }) {
+  return (
+    <div className="modal-backdrop" onClick={onCancel}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <Trash2 size={18} className="text-danger" />
+          <h3>Delete {count} note{count !== 1 ? 's' : ''}?</h3>
+        </div>
+        <p className="text-muted text-sm" style={{ margin: '10px 0 20px' }}>
+          {count} note{count !== 1 ? 's' : ''} will be moved to Trash.
+          You can recover {count !== 1 ? 'them' : 'it'} from the Trash page within <strong>7 days</strong> before permanent deletion.
+        </p>
+        <div className="modal-actions">
+          <button className="btn btn-secondary" onClick={onCancel} disabled={deleting}>Cancel</button>
+          <button className="btn btn-danger" onClick={onConfirm} disabled={deleting}>
+            {deleting
+              ? <><Loader2 size={14} className="spin" /> Deleting…</>
+              : <><Trash2 size={14} /> Delete {count} note{count !== 1 ? 's' : ''}</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 

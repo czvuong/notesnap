@@ -319,6 +319,9 @@ export default function NoteEditor() {
           <ArrowLeft size={14} /> Library
         </Link>
         <div className="editor-topbar-actions">
+          <Link to={`/notes/${id}/study`} className="btn btn-secondary btn-sm">
+            <GraduationCap size={14} /> Study tools
+          </Link>
           {sourceUrl && (
             <button
               className={`btn btn-sm${sourceOpen ? ' btn-secondary' : ' btn-ghost'}`}
@@ -328,9 +331,6 @@ export default function NoteEditor() {
               <FileImage size={14} /> Source
             </button>
           )}
-          <Link to={`/notes/${id}/study`} className="btn btn-secondary btn-sm">
-            <GraduationCap size={14} /> Study tools
-          </Link>
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => setShowShare(true)}

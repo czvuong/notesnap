@@ -325,6 +325,66 @@
 .modal-header h3 { font-size: 1rem; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
+/* ── Multi-select ─────────────────────────────────────────────────────────── */
+
+/* Bulk action bar — floats above note grid when in select mode */
+.bulk-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-primary-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.bulk-select-all {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.8125rem; font-weight: 600;
+}
+.bulk-action-bar-actions {
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* Note card — selectable / selected states */
+.note-card-wrap { position: relative; }
+
+.note-card-wrap--selectable .note-card {
+  cursor: pointer;
+  user-select: none;
+}
+.note-card-wrap--selectable .note-card:hover {
+  border-color: var(--color-primary-light);
+}
+.note-card-wrap--selected .note-card {
+  border-color: var(--color-primary) !important;
+  background: var(--color-primary-xlight);
+}
+
+/* Checkbox button — top-left corner of card */
+.note-card-checkbox {
+  position: absolute;
+  top: 10px; left: 10px;
+  z-index: 2;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+.note-card-wrap--selected .note-card-checkbox {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary-xlight);
+}
+.note-card-checkbox:hover { color: var(--color-primary); border-color: var(--color-primary); }
+
 /* ── Mobile responsive: ≤ 640px ──────────────────────────────────────────── */
 @media (max-width: 640px) {
   /* Toolbar row 1: let search shrink, sort goes below if needed */
@@ -354,4 +414,12 @@
 
   /* Pagination: tighter */
   .pagination { gap: 2px; }
+
+  /* Bulk action bar: stack vertically on mobile */
+  .bulk-action-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .bulk-action-bar-actions { flex-wrap: wrap; }
 }
