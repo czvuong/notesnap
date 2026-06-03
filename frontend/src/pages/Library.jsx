@@ -4,9 +4,9 @@ import {
   Search, FileText, Sparkles, BookOpen,
   Tag, Calendar, ChevronLeft, ChevronRight, X, Plus,
   Loader2, Inbox, Layers, Unlink,
-  CheckSquare, Square, Share2, Trash2, Globe, Lock,
+  CheckSquare, Square, Share2, Trash2, Globe, Lock, Download, Copy, Check,
 } from 'lucide-react'
-import { listNotes, listCourses, listTags, createCourse, ungroupNote, shareNote, deleteNote } from '../api.js'
+import { listNotes, listCourses, listTags, createCourse, ungroupNote, shareNote, deleteNote, getNote } from '../api.js'
 import './Library.css'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -46,11 +46,19 @@ export default function Library() {
 
   // Multi-select
   const [selectMode,    setSelectMode]    = useState(false)
-  const [selected,      setSelected]      = useState(new Set()) // Set of note IDs
+  const [selected,      setSelected]      = useState(new Set()) // Set of note IDs (live)
+  const [pendingIds,    setPendingIds]    = useState([])        // frozen at modal-open time
   const [bulkDeleting,  setBulkDeleting]  = useState(false)
   const [bulkSharing,   setBulkSharing]   = useState(false)
+  const [downloading,   setDownloading]   = useState(false)
   const [showBulkDelete,setShowBulkDelete]= useState(false)
   const [showBulkShare, setShowBulkShare] = useState(false)
+  const [shareResult,   setShareResult]   = useState(null)  // {type:'public'|'private', notes:[]}
+
+  // Reset share result whenever the modal opens fresh
+  useEffect(() => {
+    if (showBulkShare) setShareResult(null)
+  }, [showBulkShare])
 
   // Last batch — read once from localStorage so user can jump back after navigating away
   const [lastBatch, setLastBatch] = useState(() => {
@@ -180,35 +188,65 @@ export default function Library() {
     }
   }
 
-  // Capture selected IDs at the moment the action is confirmed, not at render time,
-  // so stale React state can't interfere with the in-flight requests.
+  // ── Bulk action handlers ──────────────────────────────────────────────────
+  // pendingIds is frozen at modal-open time so counts/IDs never drift mid-flight.
+
   async function handleBulkShare(makePublic) {
-    const ids = [...selected]
-    if (ids.length === 0) return
+    if (pendingIds.length === 0) return
     setBulkSharing(true)
     try {
-      // allSettled: don't abort on a single failure
-      await Promise.allSettled(ids.map(id => shareNote(id, makePublic)))
-      await fetchNotes()
+      await Promise.allSettled(pendingIds.map(id => shareNote(id, makePublic)))
+      if (makePublic) {
+        // Fetch updated note details to retrieve the generated public slugs
+        const results = await Promise.allSettled(pendingIds.map(id => getNote(id)))
+        const sharedNotes = results
+          .filter(r => r.status === 'fulfilled' && r.value?.public_slug)
+          .map(r => ({ id: r.value.id, title: r.value.title, slug: r.value.public_slug }))
+        setShareResult({ type: 'public', notes: sharedNotes })
+      } else {
+        setShareResult({ type: 'private', notes: [] })
+      }
+      fetchNotes() // background refresh — intentionally NOT awaited
     } finally {
       setBulkSharing(false)
-      setShowBulkShare(false)
+      // Modal stays open to show the result / links
     }
   }
 
   async function handleBulkDelete() {
-    const ids = [...selected]
-    if (ids.length === 0) return
+    if (pendingIds.length === 0) return
     setBulkDeleting(true)
     try {
-      await Promise.allSettled(ids.map(id => deleteNote(id)))
-      setSelected(new Set())
-      setSelectMode(false)
-      await fetchNotes()
+      await Promise.allSettled(pendingIds.map(id => deleteNote(id)))
     } finally {
-      // Always close the modal even if some requests failed
+      // Close and clean up immediately — don't wait for the list to refresh
       setBulkDeleting(false)
       setShowBulkDelete(false)
+      setSelected(new Set())
+      setSelectMode(false)
+      fetchNotes() // background refresh — intentionally NOT awaited
+    }
+  }
+
+  async function handleBulkDownload() {
+    if (pendingIds.length === 0) return
+    setDownloading(true)
+    try {
+      const results = await Promise.allSettled(pendingIds.map(id => getNote(id)))
+      const notes = results.filter(r => r.status === 'fulfilled').map(r => r.value)
+      for (const note of notes) {
+        const md = noteToMarkdown(note)
+        const blob = new Blob([md], { type: 'text/markdown' })
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = `${note.title.replace(/[^a-z0-9]/gi, '_')}.md`
+        a.click()
+        URL.revokeObjectURL(a.href)
+        // Small gap so the browser doesn't block multiple simultaneous downloads
+        await new Promise(resolve => setTimeout(resolve, 200))
+      }
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -380,14 +418,14 @@ export default function Library() {
             <button
               className="btn btn-secondary btn-sm"
               disabled={selected.size === 0}
-              onClick={() => setShowBulkShare(true)}
+              onClick={() => { setPendingIds([...selected]); setShowBulkShare(true) }}
             >
               <Share2 size={13} /> Share
             </button>
             <button
               className="btn btn-danger btn-sm"
               disabled={selected.size === 0 || bulkDeleting}
-              onClick={() => setShowBulkDelete(true)}
+              onClick={() => { setPendingIds([...selected]); setShowBulkDelete(true) }}
             >
               <Trash2 size={13} /> Delete{selected.size > 0 ? ` (${selected.size})` : ''}
             </button>
@@ -438,17 +476,20 @@ export default function Library() {
 
       {showBulkShare && (
         <BulkShareModal
-          count={selected.size}
+          ids={pendingIds}
           loading={bulkSharing}
+          downloading={downloading}
+          shareResult={shareResult}
           onShare={() => handleBulkShare(true)}
           onUnshare={() => handleBulkShare(false)}
+          onDownload={handleBulkDownload}
           onClose={() => setShowBulkShare(false)}
         />
       )}
 
       {showBulkDelete && (
         <BulkDeleteModal
-          count={selected.size}
+          count={pendingIds.length}
           deleting={bulkDeleting}
           onConfirm={handleBulkDelete}
           onCancel={() => setShowBulkDelete(false)}
@@ -553,64 +594,138 @@ function NoteCard({ note, inBatchView = false, onUngroup, selectMode = false, se
   )
 }
 
+// ── Markdown helper (mirrors NoteEditor) ─────────────────────────────────────
+
+function noteToMarkdown(note) {
+  const lines = [`# ${note.title}`, '']
+  for (const section of note.sections ?? []) {
+    if (section.heading) lines.push(`## ${section.heading}`, '')
+    if (section.content_type === 'bullet_list') {
+      section.content.split('\n').forEach(line =>
+        lines.push(line.startsWith('-') || line.startsWith('•') ? line : `- ${line}`)
+      )
+    } else if (section.content_type === 'equation') {
+      lines.push('$$', section.content, '$$')
+    } else {
+      lines.push(section.content)
+    }
+    lines.push('')
+  }
+  return lines.join('\n')
+}
+
+
 // ── Bulk share modal ──────────────────────────────────────────────────────────
 
-function BulkShareModal({ count, loading, onShare, onUnshare, onClose }) {
+function BulkShareModal({ ids, loading, downloading, shareResult, onShare, onUnshare, onDownload, onClose }) {
+  const count = ids.length
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal share-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <Share2 size={18} />
-          <h3>Share {count} note{count !== 1 ? 's' : ''}</h3>
+          <h3>Share &amp; export · {count} note{count !== 1 ? 's' : ''}</h3>
           <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose} style={{ marginLeft: 'auto' }}>
             <X size={15} />
           </button>
         </div>
 
-        {/* Make public */}
+        {/* ── Share to web ── */}
         <div className="bulk-share-option" style={{ marginTop: 20 }}>
-          <div className="share-section-info">
-            <Globe size={15} className="share-icon-public" />
+          {shareResult?.type === 'public' ? (
+            /* Success: show generated links */
             <div>
-              <p className="share-section-title">Make public</p>
-              <p className="share-section-sub">
-                Creates a shareable read-only link for each selected note.
-                Links can be found by opening each note individually.
-              </p>
+              <div className="share-section-info" style={{ marginBottom: 12 }}>
+                <Globe size={15} className="share-icon-public" />
+                <p className="share-section-title" style={{ margin: 0 }}>
+                  {shareResult.notes.length} note{shareResult.notes.length !== 1 ? 's' : ''} are now public
+                </p>
+              </div>
+              <div className="bulk-share-links">
+                {shareResult.notes.map(note => (
+                  <BulkShareLinkRow key={note.id} note={note} />
+                ))}
+              </div>
             </div>
-          </div>
-          <button
-            className="btn btn-secondary btn-sm"
-            style={{ marginTop: 12, alignSelf: 'flex-start' }}
-            onClick={onShare}
-            disabled={loading}
-          >
-            {loading ? <Loader2 size={13} className="spin" /> : <Globe size={13} />}
-            Share {count} note{count !== 1 ? 's' : ''}
-          </button>
+          ) : shareResult?.type === 'private' ? (
+            /* Success: notes made private */
+            <div className="share-section-info">
+              <Lock size={15} className="share-icon-private" />
+              <p className="share-section-title" style={{ margin: 0 }}>Notes are now private — links disabled</p>
+            </div>
+          ) : (
+            /* Default: share / unshare buttons */
+            <>
+              <div>
+                <div className="share-section-info">
+                  <Globe size={15} className="share-icon-public" />
+                  <div>
+                    <p className="share-section-title">Make public</p>
+                    <p className="share-section-sub">Creates a shareable, read-only link for each note.</p>
+                  </div>
+                </div>
+                <button className="btn btn-secondary btn-sm" style={{ marginTop: 10 }}
+                  onClick={onShare} disabled={loading}>
+                  {loading ? <Loader2 size={13} className="spin" /> : <Globe size={13} />}
+                  Share {count} note{count !== 1 ? 's' : ''}
+                </button>
+              </div>
+              <div className="bulk-share-option--divider" style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>
+                <div className="share-section-info">
+                  <Lock size={15} className="share-icon-private" />
+                  <div>
+                    <p className="share-section-title">Make private</p>
+                    <p className="share-section-sub">Disables public links for all selected notes.</p>
+                  </div>
+                </div>
+                <button className="btn btn-secondary btn-sm" style={{ marginTop: 10 }}
+                  onClick={onUnshare} disabled={loading}>
+                  {loading ? <Loader2 size={13} className="spin" /> : <Lock size={13} />}
+                  Unshare {count} note{count !== 1 ? 's' : ''}
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Make private */}
-        <div className="bulk-share-option bulk-share-option--divider">
-          <div className="share-section-info">
-            <Lock size={15} className="share-icon-private" />
-            <div>
-              <p className="share-section-title">Make private</p>
-              <p className="share-section-sub">
-                Disables public access for all selected notes. Existing links will stop working.
-              </p>
-            </div>
-          </div>
-          <button
-            className="btn btn-secondary btn-sm"
-            style={{ marginTop: 12, alignSelf: 'flex-start' }}
-            onClick={onUnshare}
-            disabled={loading}
-          >
-            {loading ? <Loader2 size={13} className="spin" /> : <Lock size={13} />}
-            Unshare {count} note{count !== 1 ? 's' : ''}
+        {/* ── Download ── */}
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>
+          <p className="share-section-title" style={{ marginBottom: 4 }}>Download</p>
+          <p className="share-section-sub" style={{ marginBottom: 10 }}>
+            Save selected notes as individual Markdown (.md) files.
+          </p>
+          <button className="btn btn-secondary btn-sm" onClick={onDownload}
+            disabled={downloading || loading}>
+            {downloading
+              ? <><Loader2 size={13} className="spin" /> Downloading…</>
+              : <><Download size={13} /> Download {count} note{count !== 1 ? 's' : ''} as Markdown</>}
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function BulkShareLinkRow({ note }) {
+  const [copied, setCopied] = useState(false)
+  const url = `${window.location.origin}/share/${note.slug}`
+
+  function handleCopy() {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div className="bulk-share-link-row">
+      <p className="bulk-share-link-title">{note.title}</p>
+      <div className="bulk-share-link-actions">
+        <input className="share-url-input" readOnly value={url} />
+        <button className="btn btn-secondary btn-sm" onClick={handleCopy}>
+          {copied ? <><Check size={13} /> Copied!</> : <Copy size={13} />}
+        </button>
       </div>
     </div>
   )

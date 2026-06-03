@@ -342,6 +342,35 @@
   border-top: 1px solid var(--color-border);
 }
 
+/* Link list shown after sharing */
+.bulk-share-links {
+  display: flex; flex-direction: column; gap: 10px;
+  max-height: 260px; overflow-y: auto;
+}
+.bulk-share-link-row {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.bulk-share-link-title {
+  font-size: 0.8125rem; font-weight: 600;
+  margin: 0; color: var(--color-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bulk-share-link-actions {
+  display: flex; gap: 6px; align-items: center;
+}
+/* Reuse share-url-input from NoteEditor — define locally too for safety */
+.share-url-input {
+  flex: 1; font-size: 0.75rem;
+  padding: 5px 8px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-mono, monospace);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  outline: none;
+}
+
 /* ── Multi-select ─────────────────────────────────────────────────────────── */
 
 /* Bulk action bar — floats above note grid when in select mode */
