@@ -240,13 +240,10 @@ export default function StudyHub() {
           <div className="hub-cards">
             {sessions.map(s => {
               const sessionNotes = s.note_ids.map(nid => notes.find(n => n.id === nid)).filter(Boolean)
-              const courseNames  = [...new Set(sessionNotes.map(n => n.course?.name).filter(Boolean))]
-              const courseLabel  = courseNames.length === 1 ? courseNames[0] : null
               return (
                 <SavedSessionCard
                   key={s.id}
                   session={s}
-                  courseLabel={courseLabel}
                   onOpen={() => navigate(`/study-session/${s.id}`, { state: { session: s } })}
                   onDelete={() => handleDeleteSession(s.id)}
                 />
@@ -322,16 +319,14 @@ function NoteStudyCard({ note, checked, onToggle }) {
 
 // ── Saved session card ────────────────────────────────────────────────────────
 
-function SavedSessionCard({ session, courseLabel, onOpen, onDelete }) {
+function SavedSessionCard({ session, onOpen, onDelete }) {
   const isFlashcards = session.tool === 'flashcards'
   const date = new Date(session.created_at).toLocaleDateString(undefined, {
     month: 'short', day: 'numeric',
   })
 
-  // Chip labels: course name (if all from same course) or individual note titles
-  const chipLabels = courseLabel
-    ? [{ label: courseLabel, isCourse: true }]
-    : (session.note_titles ?? []).map(t => ({ label: t, isCourse: false }))
+  // Always show note title chips
+  const chipLabels = (session.note_titles ?? []).map(t => ({ label: t }))
 
   return (
     <div className="hub-card hub-session-card" onClick={onOpen} role="button" tabIndex={0}
@@ -347,11 +342,8 @@ function SavedSessionCard({ session, courseLabel, onOpen, onDelete }) {
             {isFlashcards ? 'Flashcards' : 'Practice Questions'}
           </p>
           <div className="hub-card-pills" style={{ marginTop: 4 }}>
-            {chipLabels.map(({ label, isCourse }) => (
-              <span
-                key={label}
-                className={`session-note-chip${isCourse ? ' session-note-chip--course' : ''}`}
-              >
+            {chipLabels.map(({ label }) => (
+              <span key={label} className="session-note-chip">
                 {label}
               </span>
             ))}
