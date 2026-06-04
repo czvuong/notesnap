@@ -250,6 +250,27 @@
   color: var(--color-text-muted, #888);
 }
 
+/* ── Session groups (note / course sub-headers) ───────────────────────────── */
+.hub-session-group {
+  margin-top: 16px;
+}
+.hub-session-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 2px;
+  margin-bottom: 6px;
+}
+.hub-session-group-header svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
 /* ── Spin utility ─────────────────────────────────────────────────────────── */
 .spin { animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
