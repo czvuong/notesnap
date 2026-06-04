@@ -23,8 +23,9 @@ import NoteEditor      from './pages/NoteEditor.jsx'
 import Library         from './pages/Library.jsx'
 import CoursesPage     from './pages/Courses.jsx'
 import CourseDetail    from './pages/CourseDetail.jsx'
-import StudyTools      from './pages/StudyTools.jsx'
-import StudyHub        from './pages/StudyHub.jsx'
+import StudyTools        from './pages/StudyTools.jsx'
+import StudyHub          from './pages/StudyHub.jsx'
+import StudySessionPage  from './pages/StudySessionPage.jsx'
 import TrashPage       from './pages/Trash.jsx'
 import Preferences     from './pages/Preferences.jsx'
 import PublicNoteView  from './pages/PublicNoteView.jsx'
@@ -115,8 +116,9 @@ function AuthenticatedLayout() {
               <Route path="/upload"        element={<UploadPage />} />
               <Route path="/batch"         element={<BatchUpload />} />
               <Route path="/notes/:id"     element={<NoteEditor />} />
-              <Route path="/notes/:id/study" element={<StudyTools />} />
-              <Route path="/study"         element={<StudyHub />}   />
+              <Route path="/notes/:id/study"        element={<StudyTools />}       />
+              <Route path="/study"                  element={<StudyHub />}         />
+              <Route path="/study-session/:sessionId" element={<StudySessionPage />} />
               <Route path="/library"       element={<Library />}    />
               <Route path="/courses"       element={<CoursesPage />} />
               <Route path="/courses/:id"   element={<CourseDetail />} />

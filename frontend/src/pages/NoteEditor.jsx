@@ -319,7 +319,7 @@ export default function NoteEditor() {
           <ArrowLeft size={14} /> Library
         </Link>
         <div className="editor-topbar-actions">
-          <Link to={`/notes/${id}/study`} className="btn btn-secondary btn-sm">
+          <Link to={`/study?note=${id}`} className="btn btn-secondary btn-sm">
             <GraduationCap size={14} /> Study tools
           </Link>
           {sourceUrl && (
