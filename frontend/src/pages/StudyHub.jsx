@@ -530,8 +530,21 @@ function EphemeralQuestions({ questions }) {
       </div>
       <div className="questions-list">
         {questions.map((q, i) => {
+          // options may be a pre-parsed array (from study session) or a JSON string (from DB)
           let options = null
-          try { options = q.options ? JSON.parse(q.options) : null } catch { /* noop */ }
+          try {
+            if (Array.isArray(q.options)) options = q.options
+            else if (q.options)           options = JSON.parse(q.options)
+          } catch { /* noop */ }
+
+          // Map answer letter (A/B/C/D) to index for highlighting
+          const answerLetter      = q.answer_text?.trim().toUpperCase().replace(/[^A-D]/, '')
+          const answerIndex       = answerLetter ? 'ABCD'.indexOf(answerLetter) : -1
+          const correctOptionText =
+            options && answerIndex >= 0 && options[answerIndex]
+              ? options[answerIndex].replace(/^[A-D][.)]\s*/, '')
+              : null
+
           return (
             <div key={i} className={`question-card${revealed.has(i) ? ' question-card--revealed' : ''}`}>
               <div className="question-card-header">
@@ -546,7 +559,12 @@ function EphemeralQuestions({ questions }) {
               {options && (
                 <ul className="question-options">
                   {options.map((opt, j) => (
-                    <li key={j}>{renderRichText(opt.replace(/^[A-D][.)]\s*/, ''))}</li>
+                    <li
+                      key={j}
+                      className={revealed.has(i) && j === answerIndex ? 'question-option--correct' : ''}
+                    >
+                      {renderRichText(opt.replace(/^[A-D][.)]\s*/, ''))}
+                    </li>
                   ))}
                 </ul>
               )}
@@ -557,7 +575,14 @@ function EphemeralQuestions({ questions }) {
               </button>
               {revealed.has(i) && (
                 <div className="question-answer">
-                  <p>{renderRichText(q.answer_text)}</p>
+                  {correctOptionText ? (
+                    <p>
+                      <strong style={{ marginRight: 6 }}>{answerLetter}.</strong>
+                      {renderRichText(correctOptionText)}
+                    </p>
+                  ) : (
+                    <p>{renderRichText(q.answer_text)}</p>
+                  )}
                 </div>
               )}
             </div>

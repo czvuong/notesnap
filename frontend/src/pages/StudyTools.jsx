@@ -404,7 +404,8 @@ function QuestionsPanel({ noteId }) {
 function QuestionCard({ index, question, revealed, onToggle }) {
   let options = null
   try {
-    options = question.options ? JSON.parse(question.options) : null
+    if (Array.isArray(question.options)) options = question.options
+    else if (question.options)           options = JSON.parse(question.options)
   } catch { /* not valid JSON */ }
 
   // Map answer letter (A/B/C/D) to the index into the options array
