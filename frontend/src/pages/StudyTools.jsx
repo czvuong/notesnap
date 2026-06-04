@@ -407,6 +407,15 @@ function QuestionCard({ index, question, revealed, onToggle }) {
     options = question.options ? JSON.parse(question.options) : null
   } catch { /* not valid JSON */ }
 
+  // Map answer letter (A/B/C/D) to the index into the options array
+  const answerLetter = question.answer_text?.trim().toUpperCase().replace(/[^A-D]/, '')
+  const answerIndex  = answerLetter ? 'ABCD'.indexOf(answerLetter) : -1
+  // Full answer text for multiple choice: look up the matching option
+  const correctOptionText =
+    options && answerIndex >= 0 && options[answerIndex]
+      ? options[answerIndex].replace(/^[A-D][.)]\s*/, '')
+      : null
+
   return (
     <div className={`question-card${revealed ? ' question-card--revealed' : ''}`}>
       <div className="question-card-header">
@@ -422,8 +431,12 @@ function QuestionCard({ index, question, revealed, onToggle }) {
       {options && (
         <ul className="question-options">
           {options.map((opt, i) => (
-            // AI already includes "A. " prefix — strip it so CSS list-style doesn't duplicate
-            <li key={i}>{renderRichText(opt.replace(/^[A-D][.)]\s*/, ''))}</li>
+            <li
+              key={i}
+              className={revealed && i === answerIndex ? 'question-option--correct' : ''}
+            >
+              {renderRichText(opt.replace(/^[A-D][.)]\s*/, ''))}
+            </li>
           ))}
         </ul>
       )}
@@ -436,7 +449,14 @@ function QuestionCard({ index, question, revealed, onToggle }) {
 
       {revealed && (
         <div className="question-answer">
-          <p>{renderRichText(question.answer_text)}</p>
+          {correctOptionText ? (
+            <p>
+              <strong style={{ marginRight: 6 }}>{answerLetter}.</strong>
+              {renderRichText(correctOptionText)}
+            </p>
+          ) : (
+            <p>{renderRichText(question.answer_text)}</p>
+          )}
         </div>
       )}
     </div>

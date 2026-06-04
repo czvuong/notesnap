@@ -300,6 +300,11 @@
 .question-options li {
   font-size: 0.8125rem;
   color: var(--color-text-muted);
+  transition: color 0.15s;
+}
+.question-option--correct {
+  color: #16a34a !important;
+  font-weight: 600;
 }
 
 .question-reveal-btn { margin-bottom: 0; }
