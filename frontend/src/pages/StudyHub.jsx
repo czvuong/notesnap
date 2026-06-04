@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   GraduationCap, Search, BookOpen, Sparkles,
   Layers, HelpCircle, ChevronRight, Loader2, Inbox, X,
-  CheckSquare, Square, History, Trash2, FileText, BookMarked,
+  CheckSquare, Square, History, Trash2,
 } from 'lucide-react'
 import { listNotes, listCourses, generateStudySession, listStudySessions, deleteStudySession } from '../api.js'
 import './StudyHub.css'
@@ -237,61 +237,22 @@ export default function StudyHub() {
             <span className="hub-group-count">{sessions.length}</span>
           </div>
 
-          {/* Build groups: single-note → note title, same-course → course name, else → joined titles */}
-          {(() => {
-            const groupMap = {}   // key → { label, type, sessions[] }
-
-            sessions.forEach(s => {
+          <div className="hub-cards">
+            {sessions.map(s => {
               const sessionNotes = s.note_ids.map(nid => notes.find(n => n.id === nid)).filter(Boolean)
-
-              let key, label, type
-              if (s.note_ids.length === 1) {
-                // Single note
-                label = sessionNotes[0]?.title ?? s.note_titles[0] ?? 'Unknown note'
-                key   = `note:${s.note_ids[0]}`
-                type  = 'note'
-              } else {
-                const courseNames = [...new Set(sessionNotes.map(n => n.course?.name).filter(Boolean))]
-                if (courseNames.length === 1) {
-                  // All notes from the same course
-                  label = courseNames[0]
-                  key   = `course:${courseNames[0]}`
-                  type  = 'course'
-                } else {
-                  // Mixed notes — show comma-joined titles (truncated for key stability)
-                  label = s.note_titles.join(', ')
-                  key   = `multi:${[...s.note_ids].sort().join(',')}`
-                  type  = 'multi'
-                }
-              }
-
-              if (!groupMap[key]) groupMap[key] = { label, type, items: [] }
-              groupMap[key].items.push(s)
-            })
-
-            return Object.values(groupMap).map(({ label, type, items }) => (
-              <div key={label} className="hub-session-group">
-                <div className="hub-session-group-header">
-                  {type === 'course'
-                    ? <BookMarked size={13} />
-                    : type === 'note'
-                    ? <FileText size={13} />
-                    : <Layers size={13} />}
-                  <span>{label}</span>
-                </div>
-                <div className="hub-cards">
-                  {items.map(s => (
-                    <SavedSessionCard
-                      key={s.id}
-                      session={s}
-                      onOpen={() => navigate(`/study-session/${s.id}`, { state: { session: s } })}
-                      onDelete={() => handleDeleteSession(s.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))
-          })()}
+              const courseNames  = [...new Set(sessionNotes.map(n => n.course?.name).filter(Boolean))]
+              const courseLabel  = courseNames.length === 1 ? courseNames[0] : null
+              return (
+                <SavedSessionCard
+                  key={s.id}
+                  session={s}
+                  courseLabel={courseLabel}
+                  onOpen={() => navigate(`/study-session/${s.id}`, { state: { session: s } })}
+                  onDelete={() => handleDeleteSession(s.id)}
+                />
+              )
+            })}
+          </div>
         </div>
       )}
     </div>
@@ -361,11 +322,16 @@ function NoteStudyCard({ note, checked, onToggle }) {
 
 // ── Saved session card ────────────────────────────────────────────────────────
 
-function SavedSessionCard({ session, onOpen, onDelete }) {
+function SavedSessionCard({ session, courseLabel, onOpen, onDelete }) {
   const isFlashcards = session.tool === 'flashcards'
   const date = new Date(session.created_at).toLocaleDateString(undefined, {
     month: 'short', day: 'numeric',
   })
+
+  // Chip labels: course name (if all from same course) or individual note titles
+  const chipLabels = courseLabel
+    ? [{ label: courseLabel, isCourse: true }]
+    : (session.note_titles ?? []).map(t => ({ label: t, isCourse: false }))
 
   return (
     <div className="hub-card hub-session-card" onClick={onOpen} role="button" tabIndex={0}
@@ -380,9 +346,19 @@ function SavedSessionCard({ session, onOpen, onDelete }) {
           <p className="hub-card-title">
             {isFlashcards ? 'Flashcards' : 'Practice Questions'}
           </p>
-          <p className="text-faint" style={{ fontSize: '0.75rem' }}>
-            {session.items.length} {isFlashcards ? 'cards' : 'questions'} · {date}
-          </p>
+          <div className="hub-card-pills" style={{ marginTop: 4 }}>
+            {chipLabels.map(({ label, isCourse }) => (
+              <span
+                key={label}
+                className={`session-note-chip${isCourse ? ' session-note-chip--course' : ''}`}
+              >
+                {label}
+              </span>
+            ))}
+            <span className="text-faint" style={{ fontSize: '0.75rem' }}>
+              · {session.items.length} {isFlashcards ? 'cards' : 'questions'} · {date}
+            </span>
+          </div>
         </div>
       </div>
       <button
