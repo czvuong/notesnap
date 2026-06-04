@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   BookMarked, Plus, Loader2, BookOpen, FileText,
-  GraduationCap, ChevronRight, Sparkles,
+  GraduationCap,
 } from 'lucide-react'
 import { listCourses, createCourse } from '../api.js'
 import './Courses.css'
@@ -147,7 +147,7 @@ export default function CoursesPage() {
         </form>
       )}
 
-      {/* ── Course list / empty state ── */}
+      {/* ── Course grid / empty state ── */}
       {courses.length === 0 && !showCreate ? (
         <div className="courses-empty">
           <div className="courses-empty-icon">
@@ -165,34 +165,33 @@ export default function CoursesPage() {
           </button>
         </div>
       ) : (
-        <div className="courses-list">
+        <div className="courses-grid">
           {courses.map(course => (
             <Link key={course.id} to={`/courses/${course.id}`} className="course-card">
-              <div className="course-card-icon">
-                <GraduationCap size={18} />
+              <div className="course-card-icon-wrap">
+                <GraduationCap size={26} />
               </div>
 
-              <div className="course-card-info">
+              <div className="course-card-body">
                 <div className="course-card-name">{course.name}</div>
-                <div className="course-card-meta">
-                  {course.term && (
-                    <span className="badge badge-gray badge-xs">{course.term}</span>
-                  )}
-                  {course.note_count != null && (
-                    <span className="course-card-stat">
-                      <FileText size={11} />
-                      {course.note_count} note{course.note_count !== 1 ? 's' : ''}
-                    </span>
-                  )}
-                  {course.created_at && (
-                    <span className="course-card-stat">
-                      Created {formatDate(course.created_at)}
-                    </span>
-                  )}
-                </div>
+                {course.term && (
+                  <span className="badge badge-gray badge-xs course-card-term">{course.term}</span>
+                )}
               </div>
 
-              <ChevronRight size={16} className="course-card-arrow" />
+              <div className="course-card-footer">
+                {course.note_count != null && (
+                  <span className="course-card-stat">
+                    <FileText size={11} />
+                    {course.note_count} note{course.note_count !== 1 ? 's' : ''}
+                  </span>
+                )}
+                {course.created_at && (
+                  <span className="course-card-stat course-card-date">
+                    {formatDate(course.created_at)}
+                  </span>
+                )}
+              </div>
             </Link>
           ))}
         </div>
