@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import {
   getCourse, updateCourse, deleteCourse,
-  listNotes, generateCourseSummary, generateStudySession,
+  listNotes, generateCourseSummary, generateStudySession, listStudySessions,
 } from '../api.js'
 import './CourseDetail.css'
 
@@ -103,6 +103,7 @@ export default function CourseDetail() {
 
   const [course,    setCourse]    = useState(null)
   const [notes,     setNotes]     = useState([])
+  const [sessions,  setSessions]  = useState([])   // study sessions for this course
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState(null)
 
@@ -133,10 +134,17 @@ export default function CourseDetail() {
     Promise.all([
       getCourse(id),
       listNotes({ course_id: id, sort: 'newest', limit: 50 }),
+      listStudySessions().catch(() => []),
     ])
-      .then(([c, n]) => {
+      .then(([c, n, allSessions]) => {
         setCourse(c)
-        setNotes(n.items ?? n)
+        const notesArr = n.items ?? n
+        setNotes(notesArr)
+        // Keep only sessions that include at least one note from this course
+        const noteIdSet = new Set(notesArr.map(note => note.id))
+        setSessions(allSessions.filter(s =>
+          Array.isArray(s.note_ids) && s.note_ids.some(nid => noteIdSet.has(nid))
+        ))
       })
       .catch(e => setError(e.message ?? 'Failed to load course.'))
       .finally(() => setLoading(false))
@@ -147,11 +155,27 @@ export default function CourseDetail() {
     if (editName) nameRef.current?.focus()
   }, [editName])
 
-  // ── Computed totals from notes ────────────────────────────────────────────
+  // ── Computed totals ───────────────────────────────────────────────────────
+  // Per-note counts come from individual note generation.
+  // Session counts come from generateStudySession (cross-note sessions).
+  // We show the combined total.
 
-  const flashcardTotal = notes.reduce((sum, n) => sum + (n.flashcard_count ?? 0), 0)
-  const questionTotal  = notes.reduce((sum, n) => sum + (n.question_count  ?? 0), 0)
-  const noteIds        = notes.map(n => n.id)
+  const noteIds = notes.map(n => n.id)
+
+  const flashcardSessions       = sessions.filter(s => s.tool === 'flashcards')
+  const questionSessions        = sessions.filter(s => s.tool === 'practice_questions')
+
+  const perNoteFlashcardTotal   = notes.reduce((sum, n) => sum + (n.flashcard_count ?? 0), 0)
+  const perNoteQuestionTotal    = notes.reduce((sum, n) => sum + (n.question_count  ?? 0), 0)
+  const sessionFlashcardTotal   = flashcardSessions.reduce((sum, s) => sum + (s.items?.length ?? 0), 0)
+  const sessionQuestionTotal    = questionSessions.reduce((sum, s) => sum + (s.items?.length ?? 0), 0)
+
+  const flashcardTotal = perNoteFlashcardTotal + sessionFlashcardTotal
+  const questionTotal  = perNoteQuestionTotal  + sessionQuestionTotal
+
+  // Most-recent sessions for "Study" buttons
+  const latestFlashcardSession  = flashcardSessions[0] ?? null
+  const latestQuestionSession   = questionSessions[0]  ?? null
 
   // ── Rename ────────────────────────────────────────────────────────────────
 
@@ -214,8 +238,9 @@ export default function CourseDetail() {
     if (noteIds.length === 0) return
     setGeneratingFlashcards(true)
     try {
-      await generateStudySession(noteIds, 'flashcards')
-      navigate('/study')
+      const data = await generateStudySession(noteIds, 'flashcards')
+      setSessions(prev => [data, ...prev])
+      navigate(`/study-session/${data.id}`, { state: { session: data } })
     } catch (e) {
       alert(e.message ?? 'Could not generate flashcards.')
       setGeneratingFlashcards(false)
@@ -226,8 +251,9 @@ export default function CourseDetail() {
     if (noteIds.length === 0) return
     setGeneratingQuestions(true)
     try {
-      await generateStudySession(noteIds, 'practice_questions')
-      navigate('/study')
+      const data = await generateStudySession(noteIds, 'practice_questions')
+      setSessions(prev => [data, ...prev])
+      navigate(`/study-session/${data.id}`, { state: { session: data } })
     } catch (e) {
       alert(e.message ?? 'Could not generate practice questions.')
       setGeneratingQuestions(false)
@@ -384,9 +410,19 @@ export default function CourseDetail() {
               {flashcardTotal} flashcard{flashcardTotal !== 1 ? 's' : ''} across {notes.length} note{notes.length !== 1 ? 's' : ''}.
             </p>
             <div className="course-study-actions">
-              <Link to="/study" className="btn btn-secondary btn-sm">
-                Study flashcards
-              </Link>
+              {latestFlashcardSession ? (
+                <Link
+                  to={`/study-session/${latestFlashcardSession.id}`}
+                  state={{ session: latestFlashcardSession }}
+                  className="btn btn-secondary btn-sm"
+                >
+                  Study flashcards
+                </Link>
+              ) : (
+                <Link to="/study" className="btn btn-secondary btn-sm">
+                  Study flashcards
+                </Link>
+              )}
               <button
                 className="btn btn-ghost btn-sm"
                 disabled={generatingFlashcards || notes.length === 0}
@@ -440,9 +476,19 @@ export default function CourseDetail() {
               {questionTotal} practice question{questionTotal !== 1 ? 's' : ''} across {notes.length} note{notes.length !== 1 ? 's' : ''}.
             </p>
             <div className="course-study-actions">
-              <Link to="/study" className="btn btn-secondary btn-sm">
-                Practice now
-              </Link>
+              {latestQuestionSession ? (
+                <Link
+                  to={`/study-session/${latestQuestionSession.id}`}
+                  state={{ session: latestQuestionSession }}
+                  className="btn btn-secondary btn-sm"
+                >
+                  Practice now
+                </Link>
+              ) : (
+                <Link to="/study" className="btn btn-secondary btn-sm">
+                  Practice now
+                </Link>
+              )}
               <button
                 className="btn btn-ghost btn-sm"
                 disabled={generatingQuestions || notes.length === 0}

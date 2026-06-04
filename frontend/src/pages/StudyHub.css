@@ -231,6 +231,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Course-name chip — slightly bolder to distinguish from a plain note title */
+.session-note-chip--course {
+  font-weight: 600;
+  max-width: 260px;
+}
 .session-modal-body {
   padding: 24px 20px;
   overflow-y: auto;

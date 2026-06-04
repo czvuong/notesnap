@@ -237,14 +237,22 @@ export default function StudyHub() {
             <span className="hub-group-count">{sessions.length}</span>
           </div>
           <div className="hub-cards">
-            {sessions.map(s => (
-              <SavedSessionCard
-                key={s.id}
-                session={s}
-                onOpen={() => navigate(`/study-session/${s.id}`, { state: { session: s } })}
-                onDelete={() => handleDeleteSession(s.id)}
-              />
-            ))}
+            {sessions.map(s => {
+              // If every note in this session belongs to the same course, show the
+              // course name as the label instead of listing individual note titles.
+              const sessionNotes  = s.note_ids.map(nid => notes.find(n => n.id === nid)).filter(Boolean)
+              const courseNames   = [...new Set(sessionNotes.map(n => n.course?.name).filter(Boolean))]
+              const courseLabel   = courseNames.length === 1 ? courseNames[0] : null
+              return (
+                <SavedSessionCard
+                  key={s.id}
+                  session={s}
+                  courseLabel={courseLabel}
+                  onOpen={() => navigate(`/study-session/${s.id}`, { state: { session: s } })}
+                  onDelete={() => handleDeleteSession(s.id)}
+                />
+              )
+            })}
           </div>
         </div>
       )}
@@ -315,7 +323,7 @@ function NoteStudyCard({ note, checked, onToggle }) {
 
 // ── Saved session card ────────────────────────────────────────────────────────
 
-function SavedSessionCard({ session, onOpen, onDelete }) {
+function SavedSessionCard({ session, courseLabel, onOpen, onDelete }) {
   const isFlashcards = session.tool === 'flashcards'
   const date = new Date(session.created_at).toLocaleDateString(undefined, {
     month: 'short', day: 'numeric', year: 'numeric',
@@ -325,18 +333,27 @@ function SavedSessionCard({ session, onOpen, onDelete }) {
     <div className="hub-card hub-session-card" onClick={onOpen} role="button" tabIndex={0}
       onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onOpen()}>
       <div className="hub-card-check">
-        {isFlashcards ? <Layers size={17} style={{ color: 'var(--color-primary)' }} /> : <GraduationCap size={17} style={{ color: 'var(--color-primary)' }} />}
+        {isFlashcards
+          ? <Layers size={17} style={{ color: 'var(--color-primary)' }} />
+          : <GraduationCap size={17} style={{ color: 'var(--color-primary)' }} />}
       </div>
       <div className="hub-card-body">
         <div className="hub-card-info">
           <p className="hub-card-title">
             {isFlashcards ? 'Flashcards' : 'Practice Questions'}
-            <span className="hub-session-count"> · {session.items.length} {isFlashcards ? 'cards' : 'questions'}</span>
+            <span className="hub-session-count">
+              {' '}· {session.items.length} {isFlashcards ? 'cards' : 'questions'}
+            </span>
           </p>
           <div className="hub-card-pills">
-            {session.note_titles.map((t, i) => (
-              <span key={i} className="session-note-chip">{t}</span>
-            ))}
+            {/* Show course name if all notes are from the same course; otherwise list note titles */}
+            {courseLabel ? (
+              <span className="session-note-chip session-note-chip--course">{courseLabel}</span>
+            ) : (
+              session.note_titles.map((t, i) => (
+                <span key={i} className="session-note-chip">{t}</span>
+              ))
+            )}
             <span className="text-faint" style={{ fontSize: '0.72rem' }}>{date}</span>
           </div>
         </div>
