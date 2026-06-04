@@ -169,7 +169,7 @@ export default function CoursesPage() {
           {courses.map(course => (
             <Link key={course.id} to={`/courses/${course.id}`} className="course-card">
               <div className="course-card-icon-wrap">
-                <GraduationCap size={26} />
+                <GraduationCap size={30} />
               </div>
 
               <div className="course-card-body">
