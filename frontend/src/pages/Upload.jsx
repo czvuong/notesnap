@@ -43,8 +43,7 @@ const CONTENT_TYPE_LABELS = {
 export default function Upload() {
   const navigate = useNavigate()
 
-  // step: 'upload' → 'checking' → 'extracting' → 'review' → 'saving'
-  // 'checking' = running the cheap OCR pre-check; maps to step 1 in StepIndicator
+  // step: 'upload' → 'extracting' → 'review' → 'saving'
   const [step,             setStep]             = useState('upload')
   const [file,             setFile]             = useState(null)
   const [fileHash,         setFileHash]         = useState(null)   // SHA-256 of the current file
@@ -55,6 +54,11 @@ export default function Upload() {
   const [mode,             setMode]             = useState('transcribe')
   const [result,           setResult]           = useState(null)
   const [error,            setError]            = useState(null)
+
+  // Pre-check runs in the background as soon as a file is selected.
+  // By the time the user clicks "Extract Notes", it's usually already resolved.
+  // We store the Promise (not the result) so we can await it if needed.
+  const preCheckPromiseRef = useRef(null)
 
   // Review state
   const [title,    setTitle]    = useState('')
@@ -72,7 +76,13 @@ export default function Upload() {
   // ── File validation ─────────────────────────────────────────────────────────
 
   function handleFile(f) {
-    if (!f) { setFile(null); return }
+    if (!f) {
+      setFile(null)
+      setDupInfo(null)
+      setPreCheckResult(null)
+      preCheckPromiseRef.current = null
+      return
+    }
     if (!ACCEPTED.includes(f.type)) {
       setError('Unsupported file type. Please upload a JPEG, PNG, WebP, or PDF.')
       return
@@ -85,8 +95,9 @@ export default function Upload() {
     setFile(f)
     setFileHash(null)
     setDupInfo(null)
+    setPreCheckResult(null)
 
-    // Hash the file and check for duplicates in the background
+    // ── Background duplicate check ───────────────────────────────────────────
     hashFile(f).then(hash => {
       setFileHash(hash)
       return checkImageHashes([hash])
@@ -94,6 +105,12 @@ export default function Upload() {
       const match = Object.values(duplicates)[0]
       if (match) setDupInfo(match)
     }).catch(() => {})   // best-effort — never block the user
+
+    // ── Background OCR pre-check ─────────────────────────────────────────────
+    // Fire immediately so results are ready (or nearly ready) by the time the
+    // user picks a mode and clicks "Extract Notes". The server caches the OCR
+    // result by SHA-256, so the subsequent full extraction skips OCR entirely.
+    preCheckPromiseRef.current = preCheckExtraction(f).catch(() => null)
   }
 
   // ── Extract ─────────────────────────────────────────────────────────────────
@@ -106,27 +123,28 @@ export default function Upload() {
   }
 
   /**
-   * Run the cheap OCR pre-check first.
+   * Await the background OCR pre-check (started when the file was selected).
    * If confidence is 'low', show a warning modal and let the user decide.
    * Otherwise (medium/high), proceed directly to full extraction.
-   * If the pre-check itself fails for any reason, we fail open and proceed.
+   * Falls open on any error — the main pipeline has its own error handling.
+   *
+   * Because the pre-check fires in the background at file-drop time, awaiting
+   * it here is usually instant (the Promise is already resolved). The user
+   * experiences a single continuous loading state during extraction.
    */
   async function runPreCheckThenExtract() {
     setShowDupModal(false)
-    setStep('checking')
     setError(null)
     try {
-      const check = await preCheckExtraction(file)
-      if (check.confidence === 'low') {
+      // Await the background promise; fall back to a fresh call if somehow missing
+      const check = await (preCheckPromiseRef.current ?? preCheckExtraction(file))
+      if (check?.confidence === 'low') {
         setPreCheckResult(check)
         setShowLowConfModal(true)
-        setStep('upload')   // return to upload step while modal is shown
-        return
+        return   // stay on the upload step while the modal is shown
       }
-      // Medium or high confidence — proceed immediately
     } catch {
-      // Pre-check failed (network error, model unavailable, etc.) — fail open
-      // so the user can still extract. The main pipeline has its own error handling.
+      // Pre-check unavailable — fail open and let the main pipeline decide
     }
     await doExtract()
   }
@@ -227,8 +245,6 @@ export default function Upload() {
         />
       )}
 
-      {step === 'checking' && <CheckingStep />}
-
       {step === 'extracting' && <ExtractingStep mode={mode} />}
 
       {(step === 'review' || step === 'saving') && (
@@ -309,8 +325,7 @@ function StepIndicator({ step }) {
     { id: 'extracting', label: 'Extract' },
     { id: 'review',     label: 'Review'  },
   ]
-  // 'checking' is a transient sub-step of 'upload' (pre-check runs before extraction)
-  const current = step === 'saving' ? 'review' : step === 'checking' ? 'upload' : step
+  const current = step === 'saving' ? 'review' : step
   const idx     = steps.findIndex(s => s.id === current)
 
   return (
@@ -421,18 +436,6 @@ function UploadStep({ file, mode, onFile, onMode, onExtract }) {
           Extract Notes <ChevronRight size={17} />
         </button>
       </div>
-    </div>
-  )
-}
-
-// ── Checking step (OCR pre-check) ────────────────────────────────────────────
-
-function CheckingStep() {
-  return (
-    <div className="extracting-step">
-      <Loader2 size={36} className="extracting-spinner" />
-      <h3>Checking image quality…</h3>
-      <p className="text-muted text-sm">Running a quick quality check before processing.</p>
     </div>
   )
 }
