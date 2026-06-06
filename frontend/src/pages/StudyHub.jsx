@@ -220,6 +220,7 @@ export default function StudyHub() {
                     note={note}
                     checked={selected.has(note.id)}
                     onToggle={() => toggleNote(note.id)}
+                    sessions={sessions}
                   />
                 ))}
               </div>
@@ -258,9 +259,15 @@ export default function StudyHub() {
 
 // ── Note card with checkbox ───────────────────────────────────────────────────
 
-function NoteStudyCard({ note, checked, onToggle }) {
+function NoteStudyCard({ note, checked, onToggle, sessions = [] }) {
   const hasFlashcards = (note.flashcard_count ?? 0) > 0
   const hasQuestions  = (note.question_count  ?? 0) > 0
+  // Count saved sessions that include this note (covers Hub-generated sessions)
+  const sessionCount  = sessions.filter(
+    s => Array.isArray(s.note_ids) && s.note_ids.includes(note.id)
+  ).length
+
+  const hasAnything = hasFlashcards || hasQuestions || sessionCount > 0
 
   return (
     <div
@@ -297,7 +304,12 @@ function NoteStudyCard({ note, checked, onToggle }) {
                 <HelpCircle size={10} /> {note.question_count} questions
               </span>
             )}
-            {!hasFlashcards && !hasQuestions && (
+            {sessionCount > 0 && (
+              <span className="badge badge-gray hub-pill">
+                <History size={10} /> {sessionCount} session{sessionCount !== 1 ? 's' : ''}
+              </span>
+            )}
+            {!hasAnything && (
               <span className="text-faint" style={{ fontSize: '0.75rem' }}>No saved study materials</span>
             )}
           </div>
@@ -308,7 +320,7 @@ function NoteStudyCard({ note, checked, onToggle }) {
       <Link
         to={`/notes/${note.id}/study`}
         className="btn btn-ghost btn-sm hub-card-btn"
-        title="Study this note individually"
+        title="Open per-note flashcards & questions"
         onClick={e => e.stopPropagation()}
       >
         <ChevronRight size={13} />
