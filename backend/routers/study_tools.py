@@ -6,8 +6,12 @@ All routes require authentication and are scoped to the current user.
 """
 
 from datetime import datetime, timezone
+import hashlib
 import json
+import logging
 from typing import Literal
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -58,6 +62,18 @@ def _sections_text(note: Note) -> str:
     return "\n\n".join(parts)
 
 
+def _content_hash(text: str) -> str:
+    """
+    Compute a stable SHA-256 fingerprint of section text.
+
+    Used as a cache key for flashcard and practice-question generation.
+    When a note's sections are edited, the hash changes and the next
+    generate call will skip the cache and call the LLM with fresh content.
+    Old cached rows are soft-deleted at that point so the DB stays tidy.
+    """
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 # ── Flashcards ────────────────────────────────────────────────────────────────
 
 @router.post("/api/notes/{note_id}/flashcards/generate", response_model=list[FlashcardOut])
@@ -71,13 +87,48 @@ def generate_flashcards(
     if not text.strip():
         raise HTTPException(status_code=422, detail="Note has no content to generate flashcards from.")
 
+    current_hash = _content_hash(text)
+
+    # ── Cache check ──────────────────────────────────────────────────────────
+    # If flashcards already exist for this exact content, return them without
+    # calling the LLM. The hash changes whenever sections are edited, so this
+    # is safe — stale cards are cleaned up below on a cache miss.
+    cached = db.query(Flashcard).filter(
+        Flashcard.note_id == note_id,
+        Flashcard.deleted_at == None,
+        Flashcard.content_hash == current_hash,
+    ).order_by(Flashcard.created_at).all()
+
+    if cached:
+        logger.info(
+            "Flashcard cache hit for note %s (hash=%s…, %d cards)",
+            note_id, current_hash[:12], len(cached),
+        )
+        return [_fc_out(fc) for fc in cached]
+
+    # ── Cache miss — generate fresh flashcards ───────────────────────────────
+    logger.info("Flashcard cache miss for note %s — calling LLM", note_id)
     cards_data = generate_flashcards_from_text(text)
     if not cards_data:
         raise HTTPException(status_code=502, detail="AI did not return any flashcards.")
 
+    # Soft-delete any stale flashcards (wrong hash or no hash = pre-cache rows)
+    now = datetime.now(timezone.utc)
+    stale = db.query(Flashcard).filter(
+        Flashcard.note_id == note_id,
+        Flashcard.deleted_at == None,
+    ).all()
+    for fc in stale:
+        fc.deleted_at = now
+
     new_cards = []
     for card in cards_data:
-        fc = Flashcard(note_id=note.id, front=card["front"], back=card["back"])
+        fc = Flashcard(
+            note_id=note.id,
+            front=card["front"],
+            back=card["back"],
+            content_hash=current_hash,
+        )
         db.add(fc)
         new_cards.append(fc)
 
@@ -145,9 +196,36 @@ def generate_questions(
     if not text.strip():
         raise HTTPException(status_code=422, detail="Note has no content to generate questions from.")
 
+    current_hash = _content_hash(text)
+
+    # ── Cache check ──────────────────────────────────────────────────────────
+    cached = db.query(PracticeQuestion).filter(
+        PracticeQuestion.note_id == note_id,
+        PracticeQuestion.deleted_at == None,
+        PracticeQuestion.content_hash == current_hash,
+    ).order_by(PracticeQuestion.created_at).all()
+
+    if cached:
+        logger.info(
+            "Practice question cache hit for note %s (hash=%s…, %d questions)",
+            note_id, current_hash[:12], len(cached),
+        )
+        return [_pq_out(pq) for pq in cached]
+
+    # ── Cache miss — generate fresh questions ────────────────────────────────
+    logger.info("Practice question cache miss for note %s — calling LLM", note_id)
     questions_data = generate_practice_questions_from_text(text)
     if not questions_data:
         raise HTTPException(status_code=502, detail="AI did not return any questions.")
+
+    # Soft-delete stale questions (wrong hash or pre-cache NULL hash rows)
+    now = datetime.now(timezone.utc)
+    stale = db.query(PracticeQuestion).filter(
+        PracticeQuestion.note_id == note_id,
+        PracticeQuestion.deleted_at == None,
+    ).all()
+    for pq in stale:
+        pq.deleted_at = now
 
     new_qs = []
     for q in questions_data:
@@ -157,6 +235,7 @@ def generate_questions(
             answer_text=q["answer_text"],
             question_type=q.get("question_type", "short_answer"),
             options=json.dumps(q["options"]) if q.get("options") else None,
+            content_hash=current_hash,
         )
         db.add(pq)
         new_qs.append(pq)

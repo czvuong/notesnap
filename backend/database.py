@@ -71,6 +71,14 @@ def _run_migrations():
         "is_public BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE notes ADD COLUMN IF NOT EXISTS "
         "public_slug VARCHAR(32) UNIQUE",
+        # Added: content_hash for tool-generation caching.
+        # Stores SHA-256 of the note's section text at generation time so that
+        # repeated generate calls skip the LLM when the content hasn't changed.
+        # Nullable so existing rows are treated as stale (regenerated once, then cached).
+        "ALTER TABLE flashcards ADD COLUMN IF NOT EXISTS "
+        "content_hash VARCHAR(64)",
+        "ALTER TABLE practice_questions ADD COLUMN IF NOT EXISTS "
+        "content_hash VARCHAR(64)",
     ]
     with engine.connect() as conn:
         for sql in migrations:

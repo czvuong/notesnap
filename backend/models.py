@@ -191,6 +191,10 @@ class Flashcard(Base):
     source_section_id = Column(String, ForeignKey("note_sections.id"), nullable=True)
     front             = Column(Text, nullable=False)
     back              = Column(Text, nullable=False)
+    # SHA-256 of the note's section text at generation time.
+    # Used to skip LLM calls when content hasn't changed (cache key).
+    # NULL on rows created before this column was added — treated as stale.
+    content_hash      = Column(String(64), nullable=True, index=True)
     created_at        = Column(DateTime(timezone=True), nullable=False, default=_now)
     deleted_at        = Column(DateTime(timezone=True), nullable=True)
 
@@ -224,6 +228,9 @@ class PracticeQuestion(Base):
     question_type = Column(String(20), nullable=False, default="short_answer")
     # JSON array string for MCQ options — null for short_answer
     options       = Column(Text, nullable=True)
+    # SHA-256 of the note's section text at generation time (cache key).
+    # NULL on rows created before this column was added — treated as stale.
+    content_hash  = Column(String(64), nullable=True, index=True)
     created_at    = Column(DateTime(timezone=True), nullable=False, default=_now)
     deleted_at    = Column(DateTime(timezone=True), nullable=True)
 
