@@ -83,12 +83,12 @@ export default function StudyHub() {
   function selectAll()     { setSelected(new Set(filtered.map(n => n.id))) }
   function clearSelection(){ setSelected(new Set()) }
 
-  async function startSession(tool) {
+  async function startSession(tool, force = false) {
     if (selected.size === 0) return
     setSessionGenerating(true)
     setSessionError(null)
     try {
-      const data = await generateStudySession([...selected], tool)
+      const data = await generateStudySession([...selected], tool, force)
       loadSessions()   // refresh history list
       navigate(`/study-session/${data.id}`, { state: { session: data } })
     } catch (e) {
@@ -183,6 +183,14 @@ export default function StudyHub() {
                 : <><Layers size={13} /> Flashcards</>}
             </button>
             <button
+              className="btn btn-ghost btn-icon btn-sm"
+              disabled={sessionGenerating}
+              onClick={() => startSession('flashcards', true)}
+              title="Generate a fresh set of flashcards (ignore cache)"
+            >
+              <RefreshCw size={13} />
+            </button>
+            <button
               className="btn btn-secondary btn-sm"
               disabled={sessionGenerating}
               onClick={() => startSession('practice_questions')}
@@ -190,6 +198,14 @@ export default function StudyHub() {
               {sessionGenerating
                 ? <><Loader2 size={13} className="spin" /> Generating…</>
                 : <><GraduationCap size={13} /> Practice questions</>}
+            </button>
+            <button
+              className="btn btn-ghost btn-icon btn-sm"
+              disabled={sessionGenerating}
+              onClick={() => startSession('practice_questions', true)}
+              title="Generate a fresh set of practice questions (ignore cache)"
+            >
+              <RefreshCw size={13} />
             </button>
           </div>
           <button className="btn btn-ghost btn-sm" onClick={clearSelection}>
