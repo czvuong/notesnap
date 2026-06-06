@@ -79,6 +79,7 @@ def _content_hash(text: str) -> str:
 @router.post("/api/notes/{note_id}/flashcards/generate", response_model=list[FlashcardOut])
 def generate_flashcards(
     note_id: str,
+    force: bool = False,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user),
 ):
@@ -93,18 +94,20 @@ def generate_flashcards(
     # If flashcards already exist for this exact content, return them without
     # calling the LLM. The hash changes whenever sections are edited, so this
     # is safe — stale cards are cleaned up below on a cache miss.
-    cached = db.query(Flashcard).filter(
-        Flashcard.note_id == note_id,
-        Flashcard.deleted_at == None,
-        Flashcard.content_hash == current_hash,
-    ).order_by(Flashcard.created_at).all()
+    # Skipped when force=True so the user can explicitly request a fresh set.
+    if not force:
+        cached = db.query(Flashcard).filter(
+            Flashcard.note_id == note_id,
+            Flashcard.deleted_at == None,
+            Flashcard.content_hash == current_hash,
+        ).order_by(Flashcard.created_at).all()
 
-    if cached:
-        logger.info(
-            "Flashcard cache hit for note %s (hash=%s…, %d cards)",
-            note_id, current_hash[:12], len(cached),
-        )
-        return [_fc_out(fc) for fc in cached]
+        if cached:
+            logger.info(
+                "Flashcard cache hit for note %s (hash=%s…, %d cards)",
+                note_id, current_hash[:12], len(cached),
+            )
+            return [_fc_out(fc) for fc in cached]
 
     # ── Cache miss — generate fresh flashcards ───────────────────────────────
     logger.info("Flashcard cache miss for note %s — calling LLM", note_id)
@@ -188,6 +191,7 @@ def review_flashcard(
 @router.post("/api/notes/{note_id}/practice-questions/generate", response_model=list[PracticeQuestionOut])
 def generate_questions(
     note_id: str,
+    force: bool = False,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user),
 ):
@@ -199,18 +203,20 @@ def generate_questions(
     current_hash = _content_hash(text)
 
     # ── Cache check ──────────────────────────────────────────────────────────
-    cached = db.query(PracticeQuestion).filter(
-        PracticeQuestion.note_id == note_id,
-        PracticeQuestion.deleted_at == None,
-        PracticeQuestion.content_hash == current_hash,
-    ).order_by(PracticeQuestion.created_at).all()
+    # Skipped when force=True so the user can explicitly request a fresh set.
+    if not force:
+        cached = db.query(PracticeQuestion).filter(
+            PracticeQuestion.note_id == note_id,
+            PracticeQuestion.deleted_at == None,
+            PracticeQuestion.content_hash == current_hash,
+        ).order_by(PracticeQuestion.created_at).all()
 
-    if cached:
-        logger.info(
-            "Practice question cache hit for note %s (hash=%s…, %d questions)",
-            note_id, current_hash[:12], len(cached),
-        )
-        return [_pq_out(pq) for pq in cached]
+        if cached:
+            logger.info(
+                "Practice question cache hit for note %s (hash=%s…, %d questions)",
+                note_id, current_hash[:12], len(cached),
+            )
+            return [_pq_out(pq) for pq in cached]
 
     # ── Cache miss — generate fresh questions ────────────────────────────────
     logger.info("Practice question cache miss for note %s — calling LLM", note_id)

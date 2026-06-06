@@ -113,11 +113,11 @@ function FlashcardPanel({ noteId }) {
     }
   }
 
-  async function handleGenerate() {
+  async function handleGenerate(force = false) {
     setGenerating(true)
     setError(null)
     try {
-      const data = await generateFlashcards(noteId)
+      const data = await generateFlashcards(noteId, force)
       setCards(data)
       resetSession(data)
     } catch (e) {
@@ -165,15 +165,29 @@ function FlashcardPanel({ noteId }) {
             ? `${cards.length} card${cards.length !== 1 ? 's' : ''}`
             : 'No flashcards yet'}
         </p>
-        <button
-          className="btn btn-secondary btn-sm"
-          disabled={generating}
-          onClick={handleGenerate}
-        >
-          {generating
-            ? <><Loader2 size={13} className="spin" /> Generating…</>
-            : <><Sparkles size={13} /> {cards.length ? 'Regenerate' : 'Generate'}</>}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {cards.length > 0 && (
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={generating}
+              onClick={() => handleGenerate(true)}
+              title="Generate a fresh set of flashcards"
+            >
+              {generating
+                ? <Loader2 size={13} className="spin" />
+                : <><RefreshCw size={13} /> New set</>}
+            </button>
+          )}
+          <button
+            className="btn btn-secondary btn-sm"
+            disabled={generating}
+            onClick={() => handleGenerate(false)}
+          >
+            {generating
+              ? <><Loader2 size={13} className="spin" /> Generating…</>
+              : <><Sparkles size={13} /> {cards.length ? 'Regenerate' : 'Generate'}</>}
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -319,11 +333,11 @@ function QuestionsPanel({ noteId }) {
       .finally(() => setLoading(false))
   }, [noteId])
 
-  async function handleGenerate() {
+  async function handleGenerate(force = false) {
     setGenerating(true)
     setError(null)
     try {
-      const data = await generateQuestions(noteId)
+      const data = await generateQuestions(noteId, force)
       setQuestions(data)
       setRevealed(new Set())
     } catch (e) {
@@ -360,10 +374,22 @@ function QuestionsPanel({ noteId }) {
               {revealed.size ? <><EyeOff size={13} /> Hide all</> : <><Eye size={13} /> Reveal all</>}
             </button>
           )}
+          {questions.length > 0 && (
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={generating}
+              onClick={() => handleGenerate(true)}
+              title="Generate a fresh set of questions"
+            >
+              {generating
+                ? <Loader2 size={13} className="spin" />
+                : <><RefreshCw size={13} /> New set</>}
+            </button>
+          )}
           <button
             className="btn btn-secondary btn-sm"
             disabled={generating}
-            onClick={handleGenerate}
+            onClick={() => handleGenerate(false)}
           >
             {generating
               ? <><Loader2 size={13} className="spin" /> Generating…</>

@@ -291,11 +291,17 @@ export function deleteCorrection(id)           { return del(`/api/corrections/${
 
 // ── Study tools ───────────────────────────────────────────────────────────────
 
-export function generateFlashcards(noteId)     { return post(`/api/notes/${noteId}/flashcards/generate`) }
+export function generateFlashcards(noteId, force = false) {
+  const qs = force ? "?force=true" : "";
+  return post(`/api/notes/${noteId}/flashcards/generate${qs}`);
+}
 export function listFlashcards(noteId)         { return get(`/api/notes/${noteId}/flashcards`) }
 export function reviewFlashcard(id, result)    { return post(`/api/flashcards/${id}/review`, { result }) }
 
-export function generateQuestions(noteId)      { return post(`/api/notes/${noteId}/practice-questions/generate`) }
+export function generateQuestions(noteId, force = false) {
+  const qs = force ? "?force=true" : "";
+  return post(`/api/notes/${noteId}/practice-questions/generate${qs}`);
+}
 export function listQuestions(noteId)          { return get(`/api/notes/${noteId}/practice-questions`) }
 
 export function generateCourseSummary(courseId) { return post(`/api/courses/${courseId}/summary/generate`) }
