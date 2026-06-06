@@ -56,6 +56,153 @@ def _ocr_cache_put(key: str, raw_text: str) -> None:
         _ocr_cache[key] = raw_text
 
 
+# ── OCR quality heuristics ────────────────────────────────────────────────────
+
+def _assess_ocr_quality(raw_text: str) -> tuple[str, list[str]]:
+    """
+    Estimate extraction confidence from raw OCR text using fast, zero-cost heuristics.
+    Called during the pre-check step so we can warn the user before spending
+    the full structuring-model budget on a low-quality image.
+
+    Returns:
+        (confidence_level, warnings)
+        confidence_level: "high" | "medium" | "low"
+        warnings:         human-readable reasons shown in the UI
+
+    Heuristics (in order of priority):
+      1. Very short output (<50 chars) → the image is probably blank or unreadable
+      2. Low alphabetic ratio (<35 % of non-whitespace chars) → heavy symbol noise
+      3. Many garbled runs (3+ consecutive non-word/non-punctuation chars) → OCR noise
+      4. Moderate length (<150 chars after passing checks 1–3) → medium confidence
+    """
+    text = raw_text.strip()
+
+    # 1. Barely any text detected
+    if len(text) < 50:
+        return "low", [
+            "Very little text was detected — the image may be blurry, low-contrast, or too dark."
+        ]
+
+    # 2. Alphabetic character ratio
+    non_ws = [c for c in text if not c.isspace()]
+    if non_ws:
+        alpha_ratio = sum(1 for c in non_ws if c.isalpha()) / len(non_ws)
+        if alpha_ratio < 0.35:
+            return "low", [
+                "A high proportion of unrecognised characters was detected — "
+                "the image may be difficult to read. Try a clearer or better-lit photo."
+            ]
+
+    # 3. Garbled runs of non-word, non-punctuation characters
+    garbled_runs = re.findall(r'[^\w\s,.!?;:\-\'"()\[\]{}]{3,}', text)
+    if len(garbled_runs) > 5:
+        return "low", [
+            "Unusual character sequences were detected in the scan — "
+            "the handwriting or print may be hard to read."
+        ]
+
+    # 4. Not much content, but readable
+    if len(text) < 150:
+        return "medium", ["The image contains relatively little text."]
+
+    return "high", []
+
+
+# ── Pre-check (OCR only, no structuring) ──────────────────────────────────────
+
+def ocr_pre_check(image_bytes: bytes) -> dict:
+    """
+    Run only the cheap OCR step and assess image quality.
+    The expensive structuring model is NOT called.
+
+    The OCR result is stored in the in-process cache so that a subsequent
+    full extraction call (extract_note) gets a cache hit and skips the OCR
+    API call entirely — zero double-billing.
+
+    Returns a dict matching the OcrPreCheckResult schema:
+        {
+            "image_hash":        str,
+            "confidence":        "high" | "medium" | "low",
+            "warnings":          list[str],
+            "raw_text_preview":  str,   # first 500 chars of OCR output
+        }
+    """
+    image_hash = hashlib.sha256(image_bytes).hexdigest()
+    b64_image, mime_type = _prepare_image(image_bytes)
+    is_pdf = mime_type == "application/pdf"
+
+    # ── PDF path ──────────────────────────────────────────────────────────────
+    if is_pdf:
+        pdf_text = _extract_pdf_text(image_bytes)
+        if not pdf_text:
+            return {
+                "image_hash": image_hash,
+                "confidence": "low",
+                "warnings": [
+                    "This PDF appears to be scanned (no embedded text). "
+                    "Please export it as PNG/JPEG and re-upload."
+                ],
+                "raw_text_preview": "",
+            }
+        confidence, warnings = _assess_ocr_quality(pdf_text)
+        return {
+            "image_hash":       image_hash,
+            "confidence":       confidence,
+            "warnings":         warnings,
+            "raw_text_preview": pdf_text[:500],
+        }
+
+    provider = settings.AI_PROVIDER.lower()
+
+    # ── TritonAI path — run OCR model (or use cache) ──────────────────────────
+    if provider == "tritonai":
+        cached = _ocr_cache.get(image_hash)
+        if cached is not None:
+            logger.info("Pre-check: OCR cache hit (sha256=%s…)", image_hash[:12])
+            raw_text = cached
+        else:
+            logger.info("Pre-check: calling OCR model %s", settings.TRITONAI_OCR_MODEL)
+            try:
+                from openai import PermissionDeniedError, NotFoundError
+                raw_text = _call_ocr_model(b64_image, mime_type)
+                _ocr_cache_put(image_hash, raw_text)
+            except (PermissionDeniedError, NotFoundError) as e:
+                logger.warning("Pre-check: OCR model unavailable (%s) — skipping", e.__class__.__name__)
+                # Can't assess quality without OCR; let the main pipeline decide
+                return {
+                    "image_hash":       image_hash,
+                    "confidence":       "medium",
+                    "warnings":         ["Quality pre-check is unavailable — proceeding with the vision model."],
+                    "raw_text_preview": "",
+                }
+            except Exception as e:
+                logger.warning("Pre-check: OCR call failed (%s) — skipping", e)
+                return {
+                    "image_hash":       image_hash,
+                    "confidence":       "medium",
+                    "warnings":         [],
+                    "raw_text_preview": "",
+                }
+
+        confidence, warnings = _assess_ocr_quality(raw_text)
+        return {
+            "image_hash":       image_hash,
+            "confidence":       confidence,
+            "warnings":         warnings,
+            "raw_text_preview": raw_text[:500],
+        }
+
+    # ── Anthropic / unknown provider — single-step, no OCR pre-check ──────────
+    # Anthropic's Claude handles OCR + structuring in one call, so there's no
+    # cheap pre-check step. Return medium confidence and let the main pipeline run.
+    return {
+        "image_hash":       image_hash,
+        "confidence":       "medium",
+        "warnings":         [],
+        "raw_text_preview": "",
+    }
+
+
 # ── Image pre-processing ──────────────────────────────────────────────────────
 
 MAX_DIMENSION = 2048   # pixels — models don't benefit from larger

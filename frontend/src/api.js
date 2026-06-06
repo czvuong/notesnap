@@ -82,6 +82,22 @@ const upload = (path, form)   => request('POST',   path, form, true)
 // ── Extraction ────────────────────────────────────────────────────────────────
 
 /**
+ * Run only the cheap OCR step and return a quality assessment.
+ * Does NOT call the expensive structuring model or count against daily limits.
+ * The OCR result is cached server-side so a subsequent extractNote() call
+ * for the same file skips the OCR step entirely (no double-billing).
+ *
+ * @param {File} file - The uploaded image File object
+ * @returns {Promise<OcrPreCheckResult>}
+ *   { image_hash, confidence: "high"|"medium"|"low", warnings, raw_text_preview }
+ */
+export function preCheckExtraction(file) {
+  const form = new FormData()
+  form.append('file', file)
+  return upload('/api/extract/pre-check', form)
+}
+
+/**
  * Send an image file to the AI extraction pipeline.
  * The image is processed in memory server-side and never persisted.
  *

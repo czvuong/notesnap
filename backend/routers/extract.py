@@ -23,9 +23,9 @@ from sqlalchemy.orm import Session
 from auth import get_current_user
 from config import settings
 from database import get_db
-from extraction import extract_note
+from extraction import extract_note, ocr_pre_check
 from models import Correction, Note, NoteSection, UserPreferences
-from schemas import ExtractionResult
+from schemas import ExtractionResult, OcrPreCheckResult
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/extract", tags=["extraction"])
@@ -167,6 +167,61 @@ def check_hashes(
         for row in rows
     }
     return {"duplicates": duplicates}
+
+
+# ── Pre-check endpoint (OCR quality assessment) ───────────────────────────────
+
+@router.post("/pre-check", response_model=OcrPreCheckResult)
+async def pre_check(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    """
+    Run only the cheap OCR step and return a quality assessment.
+
+    Unlike /api/extract, this endpoint does NOT:
+      - Call the expensive structuring model
+      - Count against the user's daily extraction limit
+
+    The OCR result is cached internally, so a subsequent /api/extract call
+    for the same file will skip the OCR step entirely (no double-billing).
+
+    Returns OcrPreCheckResult with confidence level and optional warnings.
+    If confidence is 'low', the client should surface a warning and ask the
+    user to confirm before proceeding to the full extraction.
+    """
+    content_type = (file.content_type or "").lower()
+    if content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=f"Unsupported file type '{content_type}'. Upload a JPEG, PNG, WebP, or PDF.",
+        )
+
+    image_bytes = await file.read()
+    if len(image_bytes) > settings.MAX_UPLOAD_BYTES:
+        mb = settings.MAX_UPLOAD_BYTES // (1024 * 1024)
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File exceeds the {mb} MB limit.",
+        )
+    if len(image_bytes) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Uploaded file is empty.",
+        )
+
+    try:
+        result = await run_in_threadpool(ocr_pre_check, image_bytes)
+    except Exception as e:
+        logger.exception("OCR pre-check failed")
+        # Non-fatal: return medium confidence so the user can still proceed
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Pre-check failed: {e}",
+        )
+
+    return result
 
 
 # ── Batch extraction endpoint ─────────────────────────────────────────────────

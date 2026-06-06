@@ -5,7 +5,7 @@ import {
   X, Plus, GripVertical, AlertCircle, CheckCircle2,
   Loader2, RotateCcw, Save,
 } from 'lucide-react'
-import { extractNote, createNote, listCourses, createCourse, listTags, hashFile, checkImageHashes } from '../api.js'
+import { extractNote, preCheckExtraction, createNote, listCourses, createCourse, listTags, hashFile, checkImageHashes } from '../api.js'
 import { saveSourceFile } from '../utils/fileStore.js'
 import TagSelect from '../components/TagSelect.jsx'
 import './Upload.css'
@@ -43,15 +43,18 @@ const CONTENT_TYPE_LABELS = {
 export default function Upload() {
   const navigate = useNavigate()
 
-  // step: 'upload' → 'extracting' → 'review' → 'saving'
-  const [step,          setStep]          = useState('upload')
-  const [file,          setFile]          = useState(null)
-  const [fileHash,      setFileHash]      = useState(null)   // SHA-256 of the current file
-  const [dupInfo,       setDupInfo]       = useState(null)   // { title } if duplicate found
-  const [showDupModal,  setShowDupModal]  = useState(false)
-  const [mode,          setMode]          = useState('transcribe')
-  const [result,        setResult]        = useState(null)
-  const [error,         setError]         = useState(null)
+  // step: 'upload' → 'checking' → 'extracting' → 'review' → 'saving'
+  // 'checking' = running the cheap OCR pre-check; maps to step 1 in StepIndicator
+  const [step,             setStep]             = useState('upload')
+  const [file,             setFile]             = useState(null)
+  const [fileHash,         setFileHash]         = useState(null)   // SHA-256 of the current file
+  const [dupInfo,          setDupInfo]          = useState(null)   // { title } if duplicate found
+  const [showDupModal,     setShowDupModal]     = useState(false)
+  const [showLowConfModal, setShowLowConfModal] = useState(false)
+  const [preCheckResult,   setPreCheckResult]   = useState(null)   // OcrPreCheckResult when confidence is low
+  const [mode,             setMode]             = useState('transcribe')
+  const [result,           setResult]           = useState(null)
+  const [error,            setError]            = useState(null)
 
   // Review state
   const [title,    setTitle]    = useState('')
@@ -99,11 +102,37 @@ export default function Upload() {
     if (!file) return
     // If a duplicate was found, show a confirmation modal before proceeding
     if (dupInfo) { setShowDupModal(true); return }
+    await runPreCheckThenExtract()
+  }
+
+  /**
+   * Run the cheap OCR pre-check first.
+   * If confidence is 'low', show a warning modal and let the user decide.
+   * Otherwise (medium/high), proceed directly to full extraction.
+   * If the pre-check itself fails for any reason, we fail open and proceed.
+   */
+  async function runPreCheckThenExtract() {
+    setShowDupModal(false)
+    setStep('checking')
+    setError(null)
+    try {
+      const check = await preCheckExtraction(file)
+      if (check.confidence === 'low') {
+        setPreCheckResult(check)
+        setShowLowConfModal(true)
+        setStep('upload')   // return to upload step while modal is shown
+        return
+      }
+      // Medium or high confidence — proceed immediately
+    } catch {
+      // Pre-check failed (network error, model unavailable, etc.) — fail open
+      // so the user can still extract. The main pipeline has its own error handling.
+    }
     await doExtract()
   }
 
   async function doExtract() {
-    setShowDupModal(false)
+    setShowLowConfModal(false)
     setStep('extracting')
     setError(null)
     try {
@@ -198,6 +227,8 @@ export default function Upload() {
         />
       )}
 
+      {step === 'checking' && <CheckingStep />}
+
       {step === 'extracting' && <ExtractingStep mode={mode} />}
 
       {(step === 'review' || step === 'saving') && (
@@ -224,8 +255,16 @@ export default function Upload() {
       {showDupModal && (
         <DuplicateModal
           title={dupInfo?.title}
-          onProceed={doExtract}
+          onProceed={runPreCheckThenExtract}
           onCancel={() => setShowDupModal(false)}
+        />
+      )}
+
+      {showLowConfModal && (
+        <LowConfidenceModal
+          preCheckResult={preCheckResult}
+          onProceed={doExtract}
+          onCancel={() => { setShowLowConfModal(false); setPreCheckResult(null) }}
         />
       )}
     </div>
@@ -270,7 +309,8 @@ function StepIndicator({ step }) {
     { id: 'extracting', label: 'Extract' },
     { id: 'review',     label: 'Review'  },
   ]
-  const current = step === 'saving' ? 'review' : step
+  // 'checking' is a transient sub-step of 'upload' (pre-check runs before extraction)
+  const current = step === 'saving' ? 'review' : step === 'checking' ? 'upload' : step
   const idx     = steps.findIndex(s => s.id === current)
 
   return (
@@ -385,6 +425,18 @@ function UploadStep({ file, mode, onFile, onMode, onExtract }) {
   )
 }
 
+// ── Checking step (OCR pre-check) ────────────────────────────────────────────
+
+function CheckingStep() {
+  return (
+    <div className="extracting-step">
+      <Loader2 size={36} className="extracting-spinner" />
+      <h3>Checking image quality…</h3>
+      <p className="text-muted text-sm">Running a quick quality check before processing.</p>
+    </div>
+  )
+}
+
 // ── Extracting step ───────────────────────────────────────────────────────────
 
 function ExtractingStep({ mode }) {
@@ -393,6 +445,69 @@ function ExtractingStep({ mode }) {
       <Loader2 size={36} className="extracting-spinner" />
       <h3>{mode === 'study_guide' ? 'Generating study guide…' : 'Transcribing your notes…'}</h3>
       <p className="text-muted text-sm">Reading and structuring your content. This takes a few seconds.</p>
+    </div>
+  )
+}
+
+// ── Low-confidence modal ──────────────────────────────────────────────────────
+
+function LowConfidenceModal({ preCheckResult, onProceed, onCancel }) {
+  const warnings = preCheckResult?.warnings ?? []
+  const preview  = preCheckResult?.raw_text_preview ?? ''
+
+  return (
+    <div className="modal-backdrop" onClick={onCancel}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+        <div className="modal-header" style={{ marginBottom: 12 }}>
+          <AlertCircle size={20} style={{ color: 'var(--color-danger, #dc2626)' }} />
+          <h3>Low image quality detected</h3>
+        </div>
+
+        {warnings.length > 0 && (
+          <div className="banner banner-error" style={{ marginBottom: 14 }}>
+            <AlertCircle size={14} />
+            <span>{warnings.join(' ')}</span>
+          </div>
+        )}
+
+        <p className="text-sm text-muted" style={{ marginBottom: preview ? 12 : 0 }}>
+          The image may be too blurry, dark, or low-contrast for accurate extraction.
+          For best results, try retaking the photo in better lighting.
+          You can still proceed — extraction may work, but the results could be incomplete.
+        </p>
+
+        {preview && (
+          <div style={{ marginBottom: 16 }}>
+            <p className="section-label" style={{ marginBottom: 6 }}>What the scanner picked up</p>
+            <pre
+              style={{
+                background: 'var(--color-surface-raised, #f3f4f6)',
+                borderRadius: 6,
+                padding: '10px 12px',
+                fontSize: '0.75rem',
+                lineHeight: 1.5,
+                maxHeight: 140,
+                overflowY: 'auto',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                color: 'var(--color-text-muted, #6b7280)',
+                margin: 0,
+              }}
+            >
+              {preview}
+            </pre>
+          </div>
+        )}
+
+        <div className="modal-actions">
+          <button className="btn btn-ghost" onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="btn btn-primary" onClick={onProceed}>
+            Proceed anyway
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

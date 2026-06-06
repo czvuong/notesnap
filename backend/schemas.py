@@ -193,6 +193,20 @@ class ExtractionResult(_Base):
     image_hash: Optional[str] = None   # SHA-256 of original file; stored in DB for duplicate detection
 
 
+class OcrPreCheckResult(_Base):
+    """
+    What the /api/extract/pre-check endpoint returns.
+    Runs only the cheap OCR step and heuristic quality assessment —
+    the expensive structuring model is NOT called yet.
+    The client shows a warning if confidence is 'low' and lets the user
+    decide whether to proceed or cancel before spending the full extraction budget.
+    """
+    image_hash: str
+    confidence: Literal["high", "medium", "low"]
+    warnings: list[str] = []
+    raw_text_preview: str = ""   # first ~500 chars of OCR output for the user to review
+
+
 # ── Corrections ───────────────────────────────────────────────────────────────
 
 CORRECTION_TYPES = Literal["spelling", "terminology", "formatting", "section_rename", "content"]
