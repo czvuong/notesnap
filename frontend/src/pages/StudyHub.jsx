@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   GraduationCap, Search, BookOpen, Sparkles,
   Layers, HelpCircle, ChevronRight, Loader2, Inbox, X,
-  CheckSquare, Square, History, Trash2,
+  CheckSquare, Square, History, Trash2, RefreshCw,
 } from 'lucide-react'
 import { listNotes, listCourses, generateStudySession, listStudySessions, deleteStudySession } from '../api.js'
 import './StudyHub.css'
@@ -100,6 +100,19 @@ export default function StudyHub() {
   async function handleDeleteSession(id) {
     await deleteStudySession(id).catch(() => {})
     setSessions(prev => prev.filter(s => s.id !== id))
+  }
+
+  async function handleRegenerateSession(session) {
+    setSessionGenerating(true)
+    setSessionError(null)
+    try {
+      const data = await generateStudySession(session.note_ids, session.tool, true)
+      loadSessions()
+      navigate(`/study-session/${data.id}`, { state: { session: data } })
+    } catch (e) {
+      setSessionError(e.message ?? 'Failed to regenerate session.')
+      setSessionGenerating(false)
+    }
   }
 
   const selectedCount = selected.size
@@ -247,6 +260,8 @@ export default function StudyHub() {
                   session={s}
                   onOpen={() => navigate(`/study-session/${s.id}`, { state: { session: s } })}
                   onDelete={() => handleDeleteSession(s.id)}
+                  onRegenerate={() => handleRegenerateSession(s)}
+                  regenerating={sessionGenerating}
                 />
               )
             })}
@@ -331,7 +346,7 @@ function NoteStudyCard({ note, checked, onToggle, sessions = [] }) {
 
 // ── Saved session card ────────────────────────────────────────────────────────
 
-function SavedSessionCard({ session, onOpen, onDelete }) {
+function SavedSessionCard({ session, onOpen, onDelete, onRegenerate, regenerating }) {
   const isFlashcards = session.tool === 'flashcards'
   const date = new Date(session.created_at).toLocaleDateString(undefined, {
     month: 'short', day: 'numeric',
@@ -365,6 +380,15 @@ function SavedSessionCard({ session, onOpen, onDelete }) {
           </div>
         </div>
       </div>
+      <button
+        className="btn btn-ghost btn-icon btn-sm"
+        disabled={regenerating}
+        onClick={e => { e.stopPropagation(); onRegenerate() }}
+        aria-label="Generate new set"
+        title="Generate a fresh set"
+      >
+        {regenerating ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />}
+      </button>
       <button
         className="btn btn-ghost btn-icon btn-sm"
         onClick={e => { e.stopPropagation(); onDelete() }}

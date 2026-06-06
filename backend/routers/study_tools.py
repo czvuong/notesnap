@@ -311,6 +311,7 @@ def _session_out(s: StudySession) -> StudySessionOut:
 @router.post("/api/study-session/generate", response_model=StudySessionOut)
 def generate_study_session(
     body: StudySessionRequest,
+    force: bool = False,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user),
 ):
@@ -337,19 +338,21 @@ def generate_study_session(
     # If a session already exists for this exact combination of notes + tool +
     # content, return it without calling the LLM. This prevents the duplicate
     # sessions that accumulate when the user clicks "Generate" multiple times.
-    cached_session = db.query(StudySession).filter(
-        StudySession.user_id == current_user,
-        StudySession.tool == body.tool,
-        StudySession.content_hash == current_hash,
-        StudySession.deleted_at == None,
-    ).order_by(StudySession.created_at.desc()).first()
+    # Skipped when force=True so the user can explicitly request a fresh set.
+    if not force:
+        cached_session = db.query(StudySession).filter(
+            StudySession.user_id == current_user,
+            StudySession.tool == body.tool,
+            StudySession.content_hash == current_hash,
+            StudySession.deleted_at == None,
+        ).order_by(StudySession.created_at.desc()).first()
 
-    if cached_session:
-        logger.info(
-            "Study session cache hit (tool=%s, hash=%s…)",
-            body.tool, current_hash[:12],
-        )
-        return _session_out(cached_session)
+        if cached_session:
+            logger.info(
+                "Study session cache hit (tool=%s, hash=%s…)",
+                body.tool, current_hash[:12],
+            )
+            return _session_out(cached_session)
 
     # ── Cache miss — generate a new session ──────────────────────────────────
     logger.info("Study session cache miss (tool=%s) — calling LLM", body.tool)

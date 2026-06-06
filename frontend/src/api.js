@@ -310,8 +310,9 @@ export function generateCourseSummary(courseId) { return post(`/api/courses/${co
  *  @param {string[]} noteIds
  *  @param {'flashcards'|'practice_questions'} tool
  */
-export function generateStudySession(noteIds, tool) {
-  return post('/api/study-session/generate', { note_ids: noteIds, tool })
+export function generateStudySession(noteIds, tool, force = false) {
+  const qs = force ? "?force=true" : "";
+  return post(`/api/study-session/generate${qs}`, { note_ids: noteIds, tool });
 }
 
 export function listStudySessions()          { return get('/api/study-sessions') }
