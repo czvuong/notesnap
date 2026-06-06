@@ -316,9 +316,37 @@ def generate_study_session(
     if not notes:
         raise HTTPException(status_code=404, detail="No valid notes found.")
 
+    # Sort by ID so that selecting notes in a different order produces the same hash.
+    notes_sorted = sorted(notes, key=lambda n: n.id)
+
     combined = "\n\n---\n\n".join(
-        f"# {n.title}\n\n{_sections_text(n)}" for n in notes
+        f"# {n.title}\n\n{_sections_text(n)}" for n in notes_sorted
     )
+
+    # Include the tool in the hash so flashcard and question sessions on the
+    # same notes are cached independently.
+    current_hash = _content_hash(combined + body.tool)
+
+    # ── Cache check ──────────────────────────────────────────────────────────
+    # If a session already exists for this exact combination of notes + tool +
+    # content, return it without calling the LLM. This prevents the duplicate
+    # sessions that accumulate when the user clicks "Generate" multiple times.
+    cached_session = db.query(StudySession).filter(
+        StudySession.user_id == current_user,
+        StudySession.tool == body.tool,
+        StudySession.content_hash == current_hash,
+        StudySession.deleted_at == None,
+    ).order_by(StudySession.created_at.desc()).first()
+
+    if cached_session:
+        logger.info(
+            "Study session cache hit (tool=%s, hash=%s…)",
+            body.tool, current_hash[:12],
+        )
+        return _session_out(cached_session)
+
+    # ── Cache miss — generate a new session ──────────────────────────────────
+    logger.info("Study session cache miss (tool=%s) — calling LLM", body.tool)
 
     if body.tool == "flashcards":
         items = generate_flashcards_from_text(combined)
@@ -331,10 +359,11 @@ def generate_study_session(
 
     session = StudySession(
         user_id=current_user,
-        note_ids=json.dumps([n.id for n in notes]),
-        note_titles=json.dumps([n.title for n in notes]),
+        note_ids=json.dumps([n.id for n in notes_sorted]),
+        note_titles=json.dumps([n.title for n in notes_sorted]),
         tool=body.tool,
         items=json.dumps(items),
+        content_hash=current_hash,
     )
     db.add(session)
     db.commit()

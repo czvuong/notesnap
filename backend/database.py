@@ -79,6 +79,11 @@ def _run_migrations():
         "content_hash VARCHAR(64)",
         "ALTER TABLE practice_questions ADD COLUMN IF NOT EXISTS "
         "content_hash VARCHAR(64)",
+        # Added: content_hash for study session caching.
+        # SHA-256 of sorted combined note content + tool. Prevents duplicate sessions
+        # from being created when the user generates the same session multiple times.
+        "ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS "
+        "content_hash VARCHAR(64)",
     ]
     with engine.connect() as conn:
         for sql in migrations:

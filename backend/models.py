@@ -253,6 +253,10 @@ class StudySession(Base):
     note_titles = Column(Text, nullable=False)           # JSON list of note titles (for display without extra JOIN)
     tool        = Column(String(30), nullable=False)     # "flashcards" | "practice_questions"
     items       = Column(Text, nullable=False)           # JSON list of generated cards/questions
+    # SHA-256 of (sorted combined note content + tool). Cache key: if same notes,
+    # same tool, and no sections edited, return this session instead of calling LLM.
+    # NULL on rows created before this column was added.
+    content_hash = Column(String(64), nullable=True, index=True)
     created_at  = Column(DateTime(timezone=True), nullable=False, default=_now)
     deleted_at  = Column(DateTime(timezone=True), nullable=True)
 
