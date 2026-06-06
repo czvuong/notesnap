@@ -70,39 +70,53 @@ def _assess_ocr_quality(raw_text: str) -> tuple[str, list[str]]:
         warnings:         human-readable reasons shown in the UI
 
     Heuristics (in order of priority):
-      1. Very short output (<50 chars) → the image is probably blank or unreadable
-      2. Low alphabetic ratio (<35 % of non-whitespace chars) → heavy symbol noise
-      3. Many garbled runs (3+ consecutive non-word/non-punctuation chars) → OCR noise
-      4. Moderate length (<150 chars after passing checks 1–3) → medium confidence
+      1. Very short output (<100 chars)   → image likely blank, too dark, or unreadable
+      2. Low alphabetic ratio (<45%)      → heavy symbol / noise content
+      3. Many garbled runs (3+ consecutive non-word chars, >3 occurrences) → OCR noise
+      4. Low real-word density            → sparse/garbled despite passing checks 1-3
+         "Real words" = sequences of 3+ consecutive alphabetic characters.
+         If fewer than 40% of non-whitespace characters belong to real words, the
+         output is probably noise from a faint or blurry image.
+      5. Moderate length (<300 chars after passing checks 1–4) → medium confidence
     """
     text = raw_text.strip()
 
-    # 1. Barely any text detected
-    if len(text) < 50:
+    # 1. Barely any text detected — most common signal for washed-out / dark photos
+    if len(text) < 100:
         return "low", [
             "Very little text was detected — the image may be blurry, low-contrast, or too dark."
         ]
 
-    # 2. Alphabetic character ratio
+    # 2. Alphabetic character ratio across all non-whitespace characters
     non_ws = [c for c in text if not c.isspace()]
-    if non_ws:
-        alpha_ratio = sum(1 for c in non_ws if c.isalpha()) / len(non_ws)
-        if alpha_ratio < 0.35:
-            return "low", [
-                "A high proportion of unrecognised characters was detected — "
-                "the image may be difficult to read. Try a clearer or better-lit photo."
-            ]
+    alpha_ratio = sum(1 for c in non_ws if c.isalpha()) / len(non_ws) if non_ws else 0
+    if alpha_ratio < 0.45:
+        return "low", [
+            "A high proportion of unrecognised characters was detected — "
+            "the image may be difficult to read. Try a clearer or better-lit photo."
+        ]
 
     # 3. Garbled runs of non-word, non-punctuation characters
     garbled_runs = re.findall(r'[^\w\s,.!?;:\-\'"()\[\]{}]{3,}', text)
-    if len(garbled_runs) > 5:
+    if len(garbled_runs) > 3:
         return "low", [
             "Unusual character sequences were detected in the scan — "
             "the handwriting or print may be hard to read."
         ]
 
-    # 4. Not much content, but readable
-    if len(text) < 150:
+    # 4. Real-word density check
+    # A "real word" is a run of 3+ consecutive alphabetic characters.
+    # Faint or blurry images produce fragments and isolated letters, not words.
+    real_word_chars = sum(len(m) for m in re.findall(r'[a-zA-Z]{3,}', text))
+    real_word_ratio = real_word_chars / len(non_ws) if non_ws else 0
+    if real_word_ratio < 0.40:
+        return "low", [
+            "The scan contains mostly fragments rather than readable words — "
+            "the image may be too faint, blurry, or low-contrast for accurate extraction."
+        ]
+
+    # 5. Readable but not much content
+    if len(text) < 300:
         return "medium", ["The image contains relatively little text."]
 
     return "high", []

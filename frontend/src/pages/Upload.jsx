@@ -128,20 +128,22 @@ export default function Upload() {
    * Otherwise (medium/high), proceed directly to full extraction.
    * Falls open on any error — the main pipeline has its own error handling.
    *
-   * Because the pre-check fires in the background at file-drop time, awaiting
-   * it here is usually instant (the Promise is already resolved). The user
-   * experiences a single continuous loading state during extraction.
+   * We immediately set step → 'checking' so the user sees feedback right away.
+   * If the background pre-check is already resolved, the await is instant and
+   * we transition straight to 'extracting' with no perceptible delay.
    */
   async function runPreCheckThenExtract() {
     setShowDupModal(false)
     setError(null)
+    setStep('checking')   // show "Checking image quality…" immediately on click
     try {
       // Await the background promise; fall back to a fresh call if somehow missing
       const check = await (preCheckPromiseRef.current ?? preCheckExtraction(file))
       if (check?.confidence === 'low') {
         setPreCheckResult(check)
         setShowLowConfModal(true)
-        return   // stay on the upload step while the modal is shown
+        setStep('upload')   // return to upload step while modal is shown
+        return
       }
     } catch {
       // Pre-check unavailable — fail open and let the main pipeline decide
@@ -245,6 +247,7 @@ export default function Upload() {
         />
       )}
 
+      {step === 'checking'   && <CheckingStep />}
       {step === 'extracting' && <ExtractingStep mode={mode} />}
 
       {(step === 'review' || step === 'saving') && (
@@ -325,7 +328,8 @@ function StepIndicator({ step }) {
     { id: 'extracting', label: 'Extract' },
     { id: 'review',     label: 'Review'  },
   ]
-  const current = step === 'saving' ? 'review' : step
+  // 'checking' is a transient sub-phase of uploading — keep step 1 highlighted
+  const current = step === 'saving' ? 'review' : step === 'checking' ? 'upload' : step
   const idx     = steps.findIndex(s => s.id === current)
 
   return (
@@ -436,6 +440,18 @@ function UploadStep({ file, mode, onFile, onMode, onExtract }) {
           Extract Notes <ChevronRight size={17} />
         </button>
       </div>
+    </div>
+  )
+}
+
+// ── Checking step (OCR quality pre-check) ────────────────────────────────────
+
+function CheckingStep() {
+  return (
+    <div className="extracting-step">
+      <Loader2 size={36} className="extracting-spinner" />
+      <h3>Checking image quality…</h3>
+      <p className="text-muted text-sm">Running a quick quality check before processing.</p>
     </div>
   )
 }
