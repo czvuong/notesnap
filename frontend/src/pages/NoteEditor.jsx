@@ -1105,7 +1105,7 @@ function ShareModal({
             <div>
               <p className="share-section-title">Invite collaborators</p>
               <p className="share-section-sub">
-                No email is sent — they'll see this note in their Library when they log in.
+                They'll see this note in their Library when they log in.
               </p>
             </div>
           </div>

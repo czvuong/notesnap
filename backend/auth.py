@@ -75,6 +75,44 @@ def _get_jwks() -> dict:
 from typing import Optional, Tuple
 
 
+# ── Clerk Backend API helpers ─────────────────────────────────────────────────
+
+# Simple in-process cache: user_id → email.  Never evicted, but that is fine
+# for a course project — user emails rarely change, and the process restarts
+# often enough in dev.  Use a proper TTL cache (e.g. cachetools) for production.
+_user_email_cache: dict[str, Optional[str]] = {}
+
+
+def _fetch_email_from_clerk(user_id: str) -> Optional[str]:
+    """
+    Call Clerk's Backend API to retrieve the primary email address for a user.
+    Requires CLERK_SECRET_KEY.  Returns None on any error so callers degrade
+    gracefully rather than failing the whole request.
+    """
+    if not settings.CLERK_SECRET_KEY:
+        return None
+    if user_id in _user_email_cache:
+        return _user_email_cache[user_id]
+    try:
+        resp = httpx.get(
+            f"https://api.clerk.com/v1/users/{user_id}",
+            headers={"Authorization": f"Bearer {settings.CLERK_SECRET_KEY}"},
+            timeout=5,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            primary_id = data.get("primary_email_address_id")
+            for addr in data.get("email_addresses", []):
+                if addr.get("id") == primary_id:
+                    email = addr.get("email_address", "").strip().lower() or None
+                    _user_email_cache[user_id] = email
+                    return email
+    except Exception as exc:
+        logger.debug("Clerk email lookup failed for %s: %s", user_id, exc)
+    _user_email_cache[user_id] = None
+    return None
+
+
 def _verify_token(token: str) -> Tuple[str, Optional[str]]:
     """
     Verify a Clerk JWT and return (user_id, email).
@@ -142,8 +180,16 @@ def get_current_user_info(
     FastAPI dependency. Returns (user_id, email).
     Use this in routes that need to match email-based invites.
 
+    Email is sourced from (in priority order):
+      1. JWT claims (fast, zero extra network calls — preferred)
+      2. Clerk Backend API (one HTTP call, cached per user_id per process)
+
     Inject:
         current_user_info: Tuple[str, Optional[str]] = Depends(get_current_user_info)
         user_id, email = current_user_info
     """
-    return _verify_token(credentials.credentials)
+    user_id, email = _verify_token(credentials.credentials)
+    # If the JWT template doesn't include email, fall back to Clerk's Backend API.
+    if not email:
+        email = _fetch_email_from_clerk(user_id)
+    return user_id, email
