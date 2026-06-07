@@ -140,7 +140,9 @@ export default function Library() {
   const [sharedWithMe, setSharedWithMe] = useState([])
 
   useEffect(() => {
-    getSharedNotes().then(setSharedWithMe).catch(() => {})
+    getSharedNotes()
+      .then(data => setSharedWithMe(Array.isArray(data) ? data : []))
+      .catch(e => console.warn('getSharedNotes failed:', e?.message ?? e))
   }, [])
 
   // ── Sidebar data ──────────────────────────────────────────────────────────

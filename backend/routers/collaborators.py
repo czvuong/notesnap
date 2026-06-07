@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from typing import Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, field_validator
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -202,6 +202,34 @@ def remove_collaborator(
         raise HTTPException(status_code=404, detail="Collaborator not found.")
     db.delete(collab)
     db.commit()
+
+
+# ── Debug ─────────────────────────────────────────────────────────────────────
+
+@router.get("/api/me/debug")
+def debug_identity(
+    db: Session = Depends(get_db),
+    current_user_info: Tuple[str, Optional[str]] = Depends(get_current_user_info),
+):
+    """
+    Returns the user_id and email the backend resolved for the current session.
+    Use this to verify that email matching will work for shared-note lookups.
+    """
+    user_id, email = current_user_info
+    pending_invites = db.query(NoteCollaborator).filter(
+        NoteCollaborator.invitee_email == (email or ""),
+        NoteCollaborator.invitee_user_id == None,
+    ).count()
+    matched_by_uid = db.query(NoteCollaborator).filter(
+        NoteCollaborator.invitee_user_id == user_id,
+    ).count()
+    return {
+        "user_id": user_id,
+        "resolved_email": email,
+        "email_source": "jwt" if email else "clerk_api_or_none",
+        "pending_invites_by_email": pending_invites,
+        "matched_invites_by_user_id": matched_by_uid,
+    }
 
 
 # ── Shared-with-me ────────────────────────────────────────────────────────────

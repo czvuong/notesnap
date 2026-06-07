@@ -88,8 +88,12 @@ def _fetch_email_from_clerk(user_id: str) -> Optional[str]:
     Call Clerk's Backend API to retrieve the primary email address for a user.
     Requires CLERK_SECRET_KEY.  Returns None on any error so callers degrade
     gracefully rather than failing the whole request.
+
+    Successful lookups are cached for the lifetime of the process.
+    Failed lookups are NOT cached so they are retried on the next request.
     """
     if not settings.CLERK_SECRET_KEY:
+        logger.warning("_fetch_email_from_clerk: CLERK_SECRET_KEY not set — cannot look up email for %s", user_id)
         return None
     if user_id in _user_email_cache:
         return _user_email_cache[user_id]
@@ -99,17 +103,22 @@ def _fetch_email_from_clerk(user_id: str) -> Optional[str]:
             headers={"Authorization": f"Bearer {settings.CLERK_SECRET_KEY}"},
             timeout=5,
         )
+        logger.info("Clerk user lookup for %s → HTTP %s", user_id, resp.status_code)
         if resp.status_code == 200:
             data = resp.json()
             primary_id = data.get("primary_email_address_id")
             for addr in data.get("email_addresses", []):
                 if addr.get("id") == primary_id:
                     email = addr.get("email_address", "").strip().lower() or None
+                    logger.info("Clerk email resolved for %s → %s", user_id, email)
                     _user_email_cache[user_id] = email
                     return email
+            logger.warning("Clerk response for %s had no primary email. Body: %s", user_id, resp.text[:200])
+        else:
+            logger.warning("Clerk user lookup failed for %s: HTTP %s — %s", user_id, resp.status_code, resp.text[:200])
     except Exception as exc:
-        logger.debug("Clerk email lookup failed for %s: %s", user_id, exc)
-    _user_email_cache[user_id] = None
+        logger.warning("Clerk user lookup exception for %s: %s", user_id, exc)
+    # Do NOT cache failures — retry next request in case of transient error.
     return None
 
 
