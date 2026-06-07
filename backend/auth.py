@@ -72,15 +72,21 @@ def _get_jwks() -> dict:
         raise RuntimeError(f"Unexpected JWKS error: {type(e).__name__}: {e}") from e
 
 
-def _verify_token(token: str) -> str:
+from typing import Optional, Tuple
+
+
+def _verify_token(token: str) -> Tuple[str, Optional[str]]:
     """
-    Verify a Clerk JWT and return the user_id (the 'sub' claim).
+    Verify a Clerk JWT and return (user_id, email).
+    email may be None if not present in the JWT claims.
     Raises HTTPException 401 if the token is invalid or expired.
+
+    To include email in the JWT, add {{ user.primary_email_address }}
+    to your Clerk session token template in the Clerk dashboard.
     """
     if not settings.CLERK_SECRET_KEY:
         # No Clerk secret key configured — running in local dev mode.
-        # Return a hardcoded dev user_id so routes still work locally.
-        return "dev_user"
+        return "dev_user", "dev@example.com"
 
     try:
         jwks = _get_jwks()
@@ -106,7 +112,11 @@ def _verify_token(token: str) -> str:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token missing subject claim.",
             )
-        return user_id
+        # Clerk can include email in the JWT via a custom session token template.
+        # Falls back to None if not configured — invite matching will then rely
+        # solely on invitee_user_id after the first accepted-invite lookup.
+        email: Optional[str] = payload.get("email") or payload.get("primary_email_address")
+        return user_id, email
     except JWTError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -118,10 +128,22 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ) -> str:
     """
-    FastAPI dependency. Extracts and verifies the Bearer token from the
-    Authorization header. Returns the Clerk user_id string.
+    FastAPI dependency. Returns the Clerk user_id string.
+    Existing routes use this — no change needed there.
+    """
+    user_id, _ = _verify_token(credentials.credentials)
+    return user_id
 
-    Inject into any route that requires authentication:
-        current_user: str = Depends(get_current_user)
+
+def get_current_user_info(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+) -> Tuple[str, Optional[str]]:
+    """
+    FastAPI dependency. Returns (user_id, email).
+    Use this in routes that need to match email-based invites.
+
+    Inject:
+        current_user_info: Tuple[str, Optional[str]] = Depends(get_current_user_info)
+        user_id, email = current_user_info
     """
     return _verify_token(credentials.credentials)
