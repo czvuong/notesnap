@@ -5,8 +5,9 @@ import {
   Tag, Calendar, ChevronLeft, ChevronRight, X, Plus,
   Loader2, Inbox, Layers, Unlink,
   CheckSquare, Square, Share2, Trash2, Globe, Lock, Download, Copy, Check,
+  Users, Pencil, MessageSquare,
 } from 'lucide-react'
-import { listNotes, listCourses, listTags, createCourse, ungroupNote, shareNote, deleteNote, getNote } from '../api.js'
+import { listNotes, listCourses, listTags, createCourse, ungroupNote, shareNote, deleteNote, getNote, getSharedNotes } from '../api.js'
 import './Library.css'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -133,6 +134,14 @@ export default function Library() {
   }, [q, courseId, tag, mode, batchId, sort, page])
 
   useEffect(() => { fetchNotes() }, [fetchNotes])
+
+  // ── Shared-with-me notes ─────────────────────────────────────────────────
+
+  const [sharedWithMe, setSharedWithMe] = useState([])
+
+  useEffect(() => {
+    getSharedNotes().then(setSharedWithMe).catch(() => {})
+  }, [])
 
   // ── Sidebar data ──────────────────────────────────────────────────────────
 
@@ -500,6 +509,22 @@ export default function Library() {
           onCancel={() => setShowBulkDelete(false)}
         />
       )}
+
+      {/* ── Shared with me ── */}
+      {sharedWithMe.length > 0 && (
+        <div className="shared-with-me-section">
+          <div className="shared-with-me-header">
+            <Users size={16} />
+            <h2>Shared with me</h2>
+            <span className="badge badge-gray">{sharedWithMe.length}</span>
+          </div>
+          <div className="notes-grid">
+            {sharedWithMe.map(note => (
+              <SharedNoteCard key={note.collab_id ?? note.id} note={note} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -598,6 +623,49 @@ function NoteCard({ note, inBatchView = false, onUngroup, selectMode = false, se
     </div>
   )
 }
+
+// ── Shared note card ──────────────────────────────────────────────────────────
+
+const PERMISSION_META = {
+  view:    { label: 'View only', icon: null,        cls: 'badge-gray'   },
+  edit:    { label: 'Can edit',  icon: <Pencil size={10} />, cls: 'badge-blue'   },
+  comment: { label: 'Comment',   icon: <MessageSquare size={10} />, cls: 'badge-yellow' },
+}
+
+function SharedNoteCard({ note }) {
+  const perm = PERMISSION_META[note.permission] ?? PERMISSION_META.view
+
+  return (
+    <Link to={`/notes/${note.id}`} className="note-card shared-note-card">
+      <div className="note-card-top">
+        <div className="note-card-icon">
+          {note.extraction_mode === 'study_guide'
+            ? <Sparkles size={18} />
+            : <FileText size={18} />}
+        </div>
+        <span className={`badge note-card-mode-badge ${note.extraction_mode === 'study_guide' ? 'badge-purple' : 'badge-gray'}`}>
+          {note.extraction_mode === 'study_guide' ? 'Study guide' : 'Transcription'}
+        </span>
+      </div>
+
+      <h3 className="note-card-title">{note.title}</h3>
+
+      <div className="note-card-meta">
+        <span className="note-card-meta-item">
+          <Calendar size={11} />
+          {formatDate(note.updated_at ?? note.created_at)}
+        </span>
+      </div>
+
+      <div className="shared-note-card-footer">
+        <span className={`badge badge-xs ${perm.cls} shared-perm-badge`}>
+          {perm.icon} {perm.label}
+        </span>
+      </div>
+    </Link>
+  )
+}
+
 
 // ── Markdown helper (mirrors NoteEditor) ─────────────────────────────────────
 

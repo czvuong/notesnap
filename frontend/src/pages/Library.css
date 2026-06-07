@@ -431,6 +431,45 @@
 }
 .note-card-checkbox:hover { color: var(--color-primary); border-color: var(--color-primary); }
 
+/* ── Shared with me section ──────────────────────────────────────────────── */
+.shared-with-me-section {
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 1px solid var(--color-border);
+}
+
+.shared-with-me-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: var(--color-text);
+}
+
+.shared-with-me-header h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.shared-note-card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
+
+.shared-note-card-footer {
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.shared-perm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* ── Mobile responsive: ≤ 640px ──────────────────────────────────────────── */
 @media (max-width: 640px) {
   /* Toolbar row 1: let search shrink, sort goes below if needed */
