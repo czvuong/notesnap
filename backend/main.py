@@ -25,6 +25,7 @@ from database import SessionLocal, init_db
 from models import Course, Flashcard, Note, NoteSection, PracticeQuestion
 from routers import corrections, costs, courses, extract, images, preferences, sections, study_tools, tags, trash
 from routers import notes as notes_router
+from routers import collaborators as collaborators_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -137,6 +138,7 @@ app.include_router(trash.router)
 app.include_router(preferences.router)
 app.include_router(images.router)
 app.include_router(costs.router)
+app.include_router(collaborators_router.router)
 
 
 @app.get("/api/health")
