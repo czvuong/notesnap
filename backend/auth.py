@@ -160,9 +160,16 @@ def _verify_token(token: str) -> Tuple[str, Optional[str]]:
                 detail="Token missing subject claim.",
             )
         # Clerk can include email in the JWT via a custom session token template.
-        # Falls back to None if not configured — invite matching will then rely
-        # solely on invitee_user_id after the first accepted-invite lookup.
-        email: Optional[str] = payload.get("email") or payload.get("primary_email_address")
+        # To enable: Clerk Dashboard → Sessions → Edit default session token →
+        # add  "email": "{{user.primary_email_address}}"  to the JSON.
+        # We try several field names because different template setups vary.
+        email: Optional[str] = (
+            payload.get("email")
+            or payload.get("primary_email_address")
+            or payload.get("user_email")
+        )
+        if email:
+            email = email.strip().lower()
         return user_id, email
     except JWTError as e:
         raise HTTPException(

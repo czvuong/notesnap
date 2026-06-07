@@ -4,18 +4,23 @@ routers/sections.py — /api/notes/{note_id}/sections
 Granular section management. Every edit logs a SectionRevision before
 writing, so no content is ever silently overwritten.
 
-Sections are scoped through their parent note's user_id — all routes
-verify note ownership before touching any section.
+Access control:
+  - Owner: full access to all operations.
+  - Collaborator with 'edit' permission: can read and write sections.
+  - Collaborator with 'view' or 'comment' permission: read-only (GET endpoints).
 """
 
 from datetime import datetime, timedelta, timezone
+from typing import Optional, Tuple
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from auth import get_current_user
+from auth import get_current_user_info
 from config import settings
 from database import get_db
-from models import Note, NoteSection, SectionRevision
+from models import Note, NoteCollaborator, NoteSection, SectionRevision
 from schemas import (
     MessageOut,
     RevisionOut,
@@ -31,13 +36,50 @@ router = APIRouter(prefix="/api/notes/{note_id}/sections", tags=["sections"])
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _get_active_note(db: Session, note_id: str, user_id: str) -> Note:
+def _get_collab(db: Session, note_id: str, user_id: str, email: Optional[str]) -> Optional[NoteCollaborator]:
+    filters = [NoteCollaborator.invitee_user_id == user_id]
+    if email:
+        filters.append(NoteCollaborator.invitee_email == email.lower())
+    return db.query(NoteCollaborator).filter(
+        NoteCollaborator.note_id == note_id,
+        or_(*filters),
+    ).first()
+
+
+def _get_note_read(db: Session, note_id: str, user_id: str, email: Optional[str]) -> Note:
+    """Allow owner OR any collaborator (view/edit/comment)."""
     note = db.query(Note).filter(
         Note.id == note_id, Note.deleted_at == None, Note.user_id == user_id
     ).first()
+    if note:
+        return note
+    # Try collaborator path
+    note = db.query(Note).filter(Note.id == note_id, Note.deleted_at == None).first()
     if not note:
         raise HTTPException(status_code=404, detail="Note not found.")
+    if not _get_collab(db, note_id, user_id, email):
+        raise HTTPException(status_code=404, detail="Note not found.")
     return note
+
+
+def _get_note_edit(db: Session, note_id: str, user_id: str, email: Optional[str]) -> Note:
+    """Allow owner OR collaborator with 'edit' permission."""
+    note = db.query(Note).filter(
+        Note.id == note_id, Note.deleted_at == None, Note.user_id == user_id
+    ).first()
+    if note:
+        return note
+    # Try collaborator path
+    note = db.query(Note).filter(Note.id == note_id, Note.deleted_at == None).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found.")
+    collab = _get_collab(db, note_id, user_id, email)
+    if not collab:
+        raise HTTPException(status_code=404, detail="Note not found.")
+    if collab.permission != "edit":
+        raise HTTPException(status_code=403, detail="Edit permission required.")
+    return note
+
 
 def _get_active_section(db: Session, note_id: str, section_id: str) -> NoteSection:
     section = db.query(NoteSection).filter(
@@ -68,9 +110,10 @@ def _to_out(s: NoteSection) -> SectionOut:
 def list_sections(
     note_id: str,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user),
+    current_user_info: Tuple[str, Optional[str]] = Depends(get_current_user_info),
 ):
-    _get_active_note(db, note_id, current_user)
+    user_id, email = current_user_info
+    _get_note_read(db, note_id, user_id, email)
     sections = (
         db.query(NoteSection)
         .filter(NoteSection.note_id == note_id, NoteSection.deleted_at == None)
@@ -85,9 +128,10 @@ def add_section(
     note_id: str,
     body: SectionCreate,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user),
+    current_user_info: Tuple[str, Optional[str]] = Depends(get_current_user_info),
 ):
-    note = _get_active_note(db, note_id, current_user)
+    user_id, email = current_user_info
+    note = _get_note_edit(db, note_id, user_id, email)
     section = NoteSection(
         note_id=note.id,
         section_order=body.section_order,
@@ -108,9 +152,10 @@ def update_section(
     section_id: str,
     body: SectionUpdate,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user),
+    current_user_info: Tuple[str, Optional[str]] = Depends(get_current_user_info),
 ):
-    _get_active_note(db, note_id, current_user)
+    user_id, email = current_user_info
+    _get_note_edit(db, note_id, user_id, email)
     section = _get_active_section(db, note_id, section_id)
 
     any_content_changed = (
@@ -148,14 +193,21 @@ def reorder_sections(
     note_id: str,
     body: SectionReorderRequest,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user),
+    current_user_info: Tuple[str, Optional[str]] = Depends(get_current_user_info),
 ):
-    _get_active_note(db, note_id, current_user)
+    user_id, email = current_user_info
+    _get_note_edit(db, note_id, user_id, email)
     for new_order, section_id in enumerate(body.order):
         section = _get_active_section(db, note_id, section_id)
         section.section_order = new_order
     db.commit()
-    return list_sections(note_id, db, current_user)
+    sections = (
+        db.query(NoteSection)
+        .filter(NoteSection.note_id == note_id, NoteSection.deleted_at == None)
+        .order_by(NoteSection.section_order)
+        .all()
+    )
+    return [_to_out(s) for s in sections]
 
 
 @router.delete("/{section_id}", response_model=SoftDeleteOut)
@@ -163,9 +215,10 @@ def delete_section(
     note_id: str,
     section_id: str,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user),
+    current_user_info: Tuple[str, Optional[str]] = Depends(get_current_user_info),
 ):
-    _get_active_note(db, note_id, current_user)
+    user_id, email = current_user_info
+    _get_note_edit(db, note_id, user_id, email)
     section = _get_active_section(db, note_id, section_id)
     now = datetime.now(timezone.utc)
     section.deleted_at = now
@@ -184,9 +237,10 @@ def get_revisions(
     note_id: str,
     section_id: str,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user),
+    current_user_info: Tuple[str, Optional[str]] = Depends(get_current_user_info),
 ):
-    _get_active_note(db, note_id, current_user)
+    user_id, email = current_user_info
+    _get_note_read(db, note_id, user_id, email)
     revisions = (
         db.query(SectionRevision)
         .filter(SectionRevision.section_id == section_id)
@@ -214,9 +268,10 @@ def restore_revision(
     section_id: str,
     revision_id: str,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user),
+    current_user_info: Tuple[str, Optional[str]] = Depends(get_current_user_info),
 ):
-    _get_active_note(db, note_id, current_user)
+    user_id, email = current_user_info
+    _get_note_edit(db, note_id, user_id, email)
     section = _get_active_section(db, note_id, section_id)
 
     revision = db.query(SectionRevision).filter(
