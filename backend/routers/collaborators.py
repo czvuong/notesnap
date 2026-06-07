@@ -121,9 +121,12 @@ def invite_collaborator(
     # (We can't compare email without knowing the owner's email,
     # but we can check after the invitee_user_id is resolved.)
 
+    # Always store email lowercase so matching is case-insensitive.
+    normalized_email = body.email.strip().lower()
+
     existing = db.query(NoteCollaborator).filter(
         NoteCollaborator.note_id == note_id,
-        NoteCollaborator.invitee_email == body.email,
+        NoteCollaborator.invitee_email == normalized_email,
     ).first()
 
     if existing:
@@ -136,7 +139,7 @@ def invite_collaborator(
     collab = NoteCollaborator(
         note_id=note_id,
         owner_id=current_user,
-        invitee_email=body.email,
+        invitee_email=normalized_email,
         permission=body.permission,
         created_at=datetime.now(timezone.utc),
     )

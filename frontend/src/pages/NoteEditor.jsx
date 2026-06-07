@@ -715,8 +715,6 @@ export default function NoteEditor() {
       {showShare && (
         <ShareModal
           note={note}
-          loading={shareLoading}
-          copied={copied}
           collaborators={collaborators}
           collabEmail={collabEmail}
           collabPermission={collabPermission}
@@ -727,24 +725,6 @@ export default function NoteEditor() {
           onInvite={handleInviteCollaborator}
           onUpdateCollab={handleUpdateCollaborator}
           onRemoveCollab={handleRemoveCollaborator}
-          onTogglePublic={async (makePublic) => {
-            setShareLoading(true)
-            try {
-              const updated = await shareNote(id, makePublic)
-              setNote(updated)
-            } catch (e) {
-              setError(e.message ?? 'Could not update sharing.')
-            } finally {
-              setShareLoading(false)
-            }
-          }}
-          onCopy={() => {
-            const url = `${window.location.origin}/share/${note.public_slug}`
-            navigator.clipboard.writeText(url).then(() => {
-              setCopied(true)
-              setTimeout(() => setCopied(false), 2000)
-            })
-          }}
           onDownload={() => {
             const md = noteToMarkdown(note)
             const blob = new Blob([md], { type: 'text/markdown' })
@@ -1047,19 +1027,66 @@ function CorrectionPrompt({ onSave, onDismiss }) {
 
 // ── Share modal ───────────────────────────────────────────────────────────────
 
-const PERMISSION_LABELS = { view: 'View only', edit: 'Can edit', comment: 'Can comment' }
+// ── Permission dropdown ───────────────────────────────────────────────────────
+
+const PERM_OPTIONS = [
+  { value: 'view',    label: 'View only'  },
+  { value: 'edit',    label: 'Can edit'   },
+  { value: 'comment', label: 'Can comment'},
+]
+
+function PermSelect({ value, onChange, disabled }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const current = PERM_OPTIONS.find(o => o.value === value) ?? PERM_OPTIONS[0]
+
+  useEffect(() => {
+    function handleOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    if (open) document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [open])
+
+  return (
+    <div className="perm-select" ref={ref}>
+      <button
+        type="button"
+        className="perm-select-trigger"
+        onClick={() => !disabled && setOpen(o => !o)}
+        disabled={disabled}
+      >
+        {current.label}
+        <ChevronDown size={12} className={`perm-select-arrow${open ? ' perm-select-arrow--open' : ''}`} />
+      </button>
+      {open && (
+        <div className="perm-select-menu">
+          {PERM_OPTIONS.map(o => (
+            <button
+              key={o.value}
+              type="button"
+              className={`perm-select-option${o.value === value ? ' perm-select-option--active' : ''}`}
+              onClick={() => { onChange(o.value); setOpen(false) }}
+            >
+              <span className="perm-select-option-check">{o.value === value && <Check size={11} />}</span>
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+// ── Share modal ───────────────────────────────────────────────────────────────
 
 function ShareModal({
-  note, loading, copied,
+  note,
   collaborators, collabEmail, collabPermission, collabInviting, collabError,
   onCollabEmailChange, onCollabPermissionChange, onInvite, onUpdateCollab, onRemoveCollab,
-  onTogglePublic, onCopy, onDownload, onClose,
+  onDownload, onClose,
 }) {
-  const isPublic = note?.is_public ?? false
-  const shareUrl = isPublic && note?.public_slug
-    ? `${window.location.origin}/share/${note.public_slug}`
-    : null
-
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal share-modal" onClick={e => e.stopPropagation()}>
@@ -1073,51 +1100,46 @@ function ShareModal({
 
         {/* ── Invite collaborators ── */}
         <div className="share-section">
-          <div className="share-section-row" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Users size={15} className="share-icon-public" />
-              <div>
-                <p className="share-section-title">Invite collaborators</p>
-                <p className="share-section-sub">Invited users can only access this note — not your other notes.</p>
-              </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 12 }}>
+            <Users size={15} className="share-icon-public" style={{ marginTop: 2, flexShrink: 0 }} />
+            <div>
+              <p className="share-section-title">Invite collaborators</p>
+              <p className="share-section-sub">
+                No email is sent — they'll see this note in their Library when they log in.
+              </p>
             </div>
-
-            {/* Invite form */}
-            <div className="collab-invite-row">
-              <input
-                className="input collab-email-input"
-                type="email"
-                placeholder="Email address"
-                value={collabEmail}
-                onChange={e => onCollabEmailChange(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && onInvite()}
-                disabled={collabInviting}
-              />
-              <select
-                className="select collab-perm-select"
-                value={collabPermission}
-                onChange={e => onCollabPermissionChange(e.target.value)}
-                disabled={collabInviting}
-              >
-                <option value="view">View only</option>
-                <option value="edit">Can edit</option>
-                <option value="comment">Can comment</option>
-              </select>
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={onInvite}
-                disabled={collabInviting || !collabEmail.trim()}
-              >
-                {collabInviting
-                  ? <Loader2 size={13} className="spin" />
-                  : <><UserPlus size={13} /> Invite</>}
-              </button>
-            </div>
-
-            {collabError && (
-              <p className="text-danger text-xs" style={{ marginTop: -4 }}>{collabError}</p>
-            )}
           </div>
+
+          {/* Invite form */}
+          <div className="collab-invite-row">
+            <input
+              className="input collab-email-input"
+              type="email"
+              placeholder="Email address"
+              value={collabEmail}
+              onChange={e => onCollabEmailChange(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && onInvite()}
+              disabled={collabInviting}
+            />
+            <PermSelect
+              value={collabPermission}
+              onChange={onCollabPermissionChange}
+              disabled={collabInviting}
+            />
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={onInvite}
+              disabled={collabInviting || !collabEmail.trim()}
+            >
+              {collabInviting
+                ? <Loader2 size={13} className="spin" />
+                : <><UserPlus size={13} /> Invite</>}
+            </button>
+          </div>
+
+          {collabError && (
+            <p className="text-danger text-xs" style={{ marginTop: 6 }}>{collabError}</p>
+          )}
 
           {/* Existing collaborators list */}
           {collaborators.length > 0 && (
@@ -1125,15 +1147,10 @@ function ShareModal({
               {collaborators.map(c => (
                 <div key={c.id} className="collab-row">
                   <span className="collab-email">{c.invitee_email}</span>
-                  <select
-                    className="select collab-perm-select-inline"
+                  <PermSelect
                     value={c.permission}
-                    onChange={e => onUpdateCollab(c.id, e.target.value)}
-                  >
-                    <option value="view">View only</option>
-                    <option value="edit">Can edit</option>
-                    <option value="comment">Can comment</option>
-                  </select>
+                    onChange={val => onUpdateCollab(c.id, val)}
+                  />
                   <button
                     className="btn btn-ghost btn-icon btn-sm text-danger"
                     onClick={() => onRemoveCollab(c.id)}
@@ -1143,41 +1160,6 @@ function ShareModal({
                   </button>
                 </div>
               ))}
-            </div>
-          )}
-        </div>
-
-        {/* ── Share to web ── */}
-        <div className="share-section">
-          <div className="share-section-row">
-            <div className="share-section-info">
-              {isPublic ? <Globe size={15} className="share-icon-public" /> : <Lock size={15} className="share-icon-private" />}
-              <div>
-                <p className="share-section-title">{isPublic ? 'Anyone with the link can view' : 'Only you can view this note'}</p>
-                <p className="share-section-sub">
-                  {isPublic
-                    ? 'The shared page is read-only — no editing or account needed.'
-                    : 'Enable sharing to create a public, view-only link.'}
-                </p>
-              </div>
-            </div>
-            <button
-              className={`share-toggle${isPublic ? ' share-toggle--on' : ''}`}
-              onClick={() => onTogglePublic(!isPublic)}
-              disabled={loading}
-              aria-label={isPublic ? 'Disable sharing' : 'Enable sharing'}
-            >
-              {loading ? <Loader2 size={13} className="spin" /> : null}
-              <span className="share-toggle-knob" />
-            </button>
-          </div>
-
-          {isPublic && shareUrl && (
-            <div className="share-url-row">
-              <input className="share-url-input" readOnly value={shareUrl} />
-              <button className="btn btn-secondary btn-sm" onClick={onCopy}>
-                {copied ? <><Check size={13} /> Copied!</> : <><Copy size={13} /> Copy link</>}
-              </button>
             </div>
           )}
         </div>

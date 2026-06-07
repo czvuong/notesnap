@@ -579,6 +579,84 @@
   flex-shrink: 0;
 }
 
+/* ── Custom permission dropdown ───────────────────────────────────────────── */
+.perm-select {
+  position: relative;
+  flex-shrink: 0;
+}
+.perm-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0 10px;
+  height: 34px;
+  min-width: 120px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color var(--transition);
+}
+.perm-select-trigger:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+.perm-select-trigger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.perm-select-arrow {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.perm-select-arrow--open {
+  transform: rotate(180deg);
+}
+.perm-select-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 200;
+  overflow: hidden;
+}
+.perm-select-option {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition);
+}
+.perm-select-option:hover {
+  background: var(--color-surface-raised);
+}
+.perm-select-option--active {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+.perm-select-option-check {
+  display: inline-flex;
+  align-items: center;
+  width: 18px;
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
 .collab-list {
   margin-top: 10px;
   display: flex;
@@ -595,7 +673,8 @@
 }
 .collab-email {
   flex: 1;
-  font-size: 0.82rem;
+  font-size: 0.83rem;
+  font-weight: 500;
   color: var(--color-text);
   min-width: 0;
   overflow: hidden;
