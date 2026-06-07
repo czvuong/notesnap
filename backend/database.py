@@ -84,6 +84,32 @@ def _run_migrations():
         # from being created when the user generates the same session multiple times.
         "ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS "
         "content_hash VARCHAR(64)",
+        # Added: collaborative note sharing.
+        # note_collaborators — per-note invite records (email + permission level)
+        # note_comments      — comments left by collaborators / owner
+        """CREATE TABLE IF NOT EXISTS note_collaborators (
+            id               TEXT PRIMARY KEY,
+            note_id          TEXT NOT NULL REFERENCES notes(id),
+            owner_id         TEXT NOT NULL,
+            invitee_email    TEXT NOT NULL,
+            invitee_user_id  TEXT,
+            permission       TEXT NOT NULL DEFAULT 'view',
+            created_at       DATETIME NOT NULL,
+            UNIQUE(note_id, invitee_email)
+        )""",
+        "CREATE INDEX IF NOT EXISTS ix_nc_note_id        ON note_collaborators(note_id)",
+        "CREATE INDEX IF NOT EXISTS ix_nc_invitee_email  ON note_collaborators(invitee_email)",
+        "CREATE INDEX IF NOT EXISTS ix_nc_invitee_uid    ON note_collaborators(invitee_user_id)",
+        """CREATE TABLE IF NOT EXISTS note_comments (
+            id         TEXT PRIMARY KEY,
+            note_id    TEXT NOT NULL REFERENCES notes(id),
+            user_id    TEXT NOT NULL,
+            user_name  TEXT,
+            content    TEXT NOT NULL,
+            created_at DATETIME NOT NULL,
+            deleted_at DATETIME
+        )""",
+        "CREATE INDEX IF NOT EXISTS ix_ncmt_note_id ON note_comments(note_id)",
     ]
     with engine.connect() as conn:
         for sql in migrations:

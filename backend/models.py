@@ -81,6 +81,8 @@ class Note(Base):
     note_tags       = relationship("NoteTag", back_populates="note", cascade="all, delete-orphan")
     flashcards      = relationship("Flashcard", back_populates="note", cascade="all, delete-orphan")
     practice_qs     = relationship("PracticeQuestion", back_populates="note", cascade="all, delete-orphan")
+    collaborators   = relationship("NoteCollaborator", back_populates="note", cascade="all, delete-orphan")
+    comments        = relationship("NoteComment", back_populates="note", cascade="all, delete-orphan")
 
 
 class NoteSection(Base):
@@ -301,3 +303,55 @@ class UserPreferences(Base):
     # is read/written via raw SQL in the preferences router to avoid crashing on
     # deployments where the migration hasn't run yet.
     updated_at              = Column(DateTime(timezone=True), nullable=False, default=_now, onupdate=_now)
+
+
+class NoteCollaborator(Base):
+    """
+    Tracks who has been invited to collaborate on a specific note.
+
+    Invite flow:
+      1. Owner POSTs {invitee_email, permission} → row created, invitee_user_id = NULL
+      2. Invitee visits /shared-with-me → system matches on email from their JWT
+      3. invitee_user_id is backfilled on first match for faster subsequent lookups
+
+    permission: "view" | "edit" | "comment"
+      view    — read-only access to the note
+      edit    — full section editing (same as owner)
+      comment — read + leave comments only
+    """
+    __tablename__ = "note_collaborators"
+    __table_args__ = (UniqueConstraint("note_id", "invitee_email"),)
+
+    id               = Column(String, primary_key=True, default=_uuid)
+    note_id          = Column(String, ForeignKey("notes.id"), nullable=False, index=True)
+    owner_id         = Column(String, nullable=False, index=True)
+    invitee_email    = Column(String(320), nullable=False, index=True)
+    # Backfilled when the invitee first accesses the shared note — used for
+    # fast subsequent lookups without needing the email from every JWT.
+    invitee_user_id  = Column(String, nullable=True, index=True)
+    permission       = Column(String(10), nullable=False, default="view")
+    created_at       = Column(DateTime(timezone=True), nullable=False, default=_now)
+
+    # Relationships
+    note = relationship("Note", back_populates="collaborators")
+
+
+class NoteComment(Base):
+    """
+    Comments left by collaborators (and the owner) on a note.
+    Available to users with 'comment', 'edit', or 'owner' access.
+    """
+    __tablename__ = "note_comments"
+
+    id         = Column(String, primary_key=True, default=_uuid)
+    note_id    = Column(String, ForeignKey("notes.id"), nullable=False, index=True)
+    user_id    = Column(String, nullable=False, index=True)
+    # Display name stored at write-time (denormalized) so it survives
+    # account changes without a Clerk API lookup on every read.
+    user_name  = Column(String(200), nullable=True)
+    content    = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=_now)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Relationships
+    note = relationship("Note", back_populates="comments")
