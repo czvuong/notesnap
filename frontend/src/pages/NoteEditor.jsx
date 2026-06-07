@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useUser } from '@clerk/clerk-react'
 import {
   ArrowLeft, Pencil, Trash2, Clock, BookOpen, Tag,
   X, Check, Plus, ChevronDown, ChevronUp, AlertCircle,
   RotateCcw, Sparkles, GraduationCap, Loader2, Save, FileImage,
   Share2, Copy, Download, Globe, Lock,
+  Users, UserPlus, UserX, MessageSquare, Send,
 } from 'lucide-react'
 import {
   getNote, updateNote, updateSection, deleteNote,
@@ -12,6 +14,8 @@ import {
   getSectionRevisions, restoreRevision,
   createCorrection, deleteSection, addSection, uploadSectionImage,
   shareNote,
+  listCollaborators, inviteCollaborator, updateCollaboratorPermission, removeCollaborator,
+  listComments, addComment, deleteComment,
 } from '../api.js'
 import { getSourceFile } from '../utils/fileStore.js'
 import './NoteEditor.css'
@@ -74,6 +78,21 @@ export default function NoteEditor() {
   const [shareLoading,  setShareLoading]  = useState(false)
   const [copied,        setCopied]        = useState(false)
 
+  // Collaborators (owner view)
+  const [collaborators,     setCollaborators]     = useState([])
+  const [collabEmail,       setCollabEmail]       = useState('')
+  const [collabPermission,  setCollabPermission]  = useState('view')
+  const [collabInviting,    setCollabInviting]    = useState(false)
+  const [collabError,       setCollabError]       = useState(null)
+
+  // Comments (all permission levels except view-only can post)
+  const [comments,          setComments]          = useState([])
+  const [commentContent,    setCommentContent]    = useState('')
+  const [commentSubmitting, setCommentSubmitting] = useState(false)
+
+  // Clerk user for display name in comments
+  const { user: clerkUser } = useUser()
+
   // All tag names for suggestions
   const [allTags,       setAllTags]       = useState([])
 
@@ -96,6 +115,12 @@ export default function NoteEditor() {
         setNote(n)
         setCourses(c)
         setAllTags(t.map(tag => tag.name ?? tag))
+        // Load collaborators only if this user owns the note
+        if (n.my_permission === 'owner') {
+          listCollaborators(id).then(setCollaborators).catch(() => {})
+        }
+        // Load comments for all access levels
+        listComments(id).then(setComments).catch(() => {})
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
@@ -128,6 +153,72 @@ export default function NoteEditor() {
       setNote(n => ({ ...n, title: updated.title }))
     } catch (e) { setError(e.message) }
     setEditingTitle(false)
+  }
+
+  // ── Collaborator management ─────────────────────────────────────────────────
+
+  async function handleInviteCollaborator() {
+    if (!collabEmail.trim()) return
+    setCollabInviting(true)
+    setCollabError(null)
+    try {
+      const newCollab = await inviteCollaborator(id, collabEmail.trim(), collabPermission)
+      setCollaborators(prev => {
+        const idx = prev.findIndex(c => c.id === newCollab.id)
+        return idx >= 0
+          ? prev.map(c => c.id === newCollab.id ? newCollab : c)
+          : [...prev, newCollab]
+      })
+      setCollabEmail('')
+    } catch (e) {
+      setCollabError(e.message ?? 'Could not invite collaborator.')
+    } finally {
+      setCollabInviting(false)
+    }
+  }
+
+  async function handleUpdateCollaborator(collabId, permission) {
+    try {
+      const updated = await updateCollaboratorPermission(id, collabId, permission)
+      setCollaborators(prev => prev.map(c => c.id === collabId ? updated : c))
+    } catch (e) {
+      setError(e.message ?? 'Could not update permission.')
+    }
+  }
+
+  async function handleRemoveCollaborator(collabId) {
+    try {
+      await removeCollaborator(id, collabId)
+      setCollaborators(prev => prev.filter(c => c.id !== collabId))
+    } catch (e) {
+      setError(e.message ?? 'Could not remove collaborator.')
+    }
+  }
+
+  // ── Comment handlers ────────────────────────────────────────────────────────
+
+  async function handleAddComment() {
+    if (!commentContent.trim()) return
+    setCommentSubmitting(true)
+    try {
+      const displayName = clerkUser?.fullName ?? clerkUser?.firstName ?? null
+      const newComment = await addComment(id, commentContent.trim(), displayName)
+      setComments(prev => [...prev, newComment])
+      setCommentContent('')
+    } catch (e) {
+      setError(e.message ?? 'Could not post comment.')
+    } finally {
+      setCommentSubmitting(false)
+    }
+  }
+
+  async function handleDeleteComment(commentId) {
+    try {
+      await deleteComment(commentId)
+      setComments(prev => prev.filter(c => c.id !== commentId))
+    } catch (e) {
+      setError(e.message ?? 'Could not delete comment.')
+    }
   }
 
   // ── Section editing ─────────────────────────────────────────────────────────
@@ -319,6 +410,14 @@ export default function NoteEditor() {
           <ArrowLeft size={14} /> Library
         </Link>
         <div className="editor-topbar-actions">
+          {/* Permission badge for collaborators */}
+          {note?.my_permission && note.my_permission !== 'owner' && (
+            <span className={`badge badge-sm collab-permission-badge collab-permission-badge--${note.my_permission}`}>
+              {note.my_permission === 'view'    && <><Lock size={10} /> View only</>}
+              {note.my_permission === 'edit'    && <><Pencil size={10} /> Can edit</>}
+              {note.my_permission === 'comment' && <><MessageSquare size={10} /> Can comment</>}
+            </span>
+          )}
           <Link to={`/study?note=${id}`} className="btn btn-secondary btn-sm">
             <GraduationCap size={14} /> Study tools
           </Link>
@@ -331,16 +430,26 @@ export default function NoteEditor() {
               <FileImage size={14} /> Source
             </button>
           )}
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => setShowShare(true)}
-            data-tooltip="Share or export"
-          >
-            <Share2 size={14} /> Share
-          </button>
-          <button className="btn btn-ghost btn-sm text-danger" onClick={() => setShowDelete(true)}>
-            <Trash2 size={14} /> Delete
-          </button>
+          {/* Share & collaborator management — owner only */}
+          {(!note || note.my_permission === 'owner') && (
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setShowShare(true)}
+              data-tooltip="Share or export"
+            >
+              <Share2 size={14} />
+              Share
+              {collaborators.length > 0 && (
+                <span className="collab-count-badge">{collaborators.length}</span>
+              )}
+            </button>
+          )}
+          {/* Delete — owner only */}
+          {(!note || note.my_permission === 'owner') && (
+            <button className="btn btn-ghost btn-sm text-danger" onClick={() => setShowDelete(true)}>
+              <Trash2 size={14} /> Delete
+            </button>
+          )}
         </div>
       </div>
 
@@ -397,9 +506,11 @@ export default function NoteEditor() {
             ) : (
               <>
                 <h1 className="editor-title">{note.title}</h1>
-                <button className="btn btn-ghost btn-icon btn-sm" onClick={startEditTitle} data-tooltip="Edit title">
-                  <Pencil size={14} />
-                </button>
+                {note.my_permission === 'owner' || note.my_permission === 'edit' ? (
+                  <button className="btn btn-ghost btn-icon btn-sm" onClick={startEditTitle} data-tooltip="Edit title">
+                    <Pencil size={14} />
+                  </button>
+                ) : null}
               </>
             )}
           </div>
@@ -438,6 +549,7 @@ export default function NoteEditor() {
                   <SectionViewCard
                     section={section}
                     showingRevisions={revisionsId === section.id}
+                    canEdit={note.my_permission === 'owner' || note.my_permission === 'edit'}
                     onEdit={() => startEdit(section)}
                     onDelete={() => handleDeleteSection(section.id)}
                     onToggleRevisions={() => toggleRevisions(section.id)}
@@ -457,9 +569,24 @@ export default function NoteEditor() {
             ))}
           </div>
 
-          <button className="btn btn-secondary btn-sm mt-3" onClick={handleAddSection}>
-            <Plus size={13} /> Add section
-          </button>
+          {(note.my_permission === 'owner' || note.my_permission === 'edit') && (
+            <button className="btn btn-secondary btn-sm mt-3" onClick={handleAddSection}>
+              <Plus size={13} /> Add section
+            </button>
+          )}
+
+          {/* ── Comment panel ── */}
+          <CommentPanel
+            comments={comments}
+            canComment={note.my_permission !== 'view'}
+            currentUserId={clerkUser?.id}
+            isOwner={note.my_permission === 'owner'}
+            commentContent={commentContent}
+            onContentChange={setCommentContent}
+            onSubmit={handleAddComment}
+            onDelete={handleDeleteComment}
+            submitting={commentSubmitting}
+          />
         </div>
 
         {/* ── Sidebar ── */}
@@ -582,6 +709,16 @@ export default function NoteEditor() {
           note={note}
           loading={shareLoading}
           copied={copied}
+          collaborators={collaborators}
+          collabEmail={collabEmail}
+          collabPermission={collabPermission}
+          collabInviting={collabInviting}
+          collabError={collabError}
+          onCollabEmailChange={setCollabEmail}
+          onCollabPermissionChange={setCollabPermission}
+          onInvite={handleInviteCollaborator}
+          onUpdateCollab={handleUpdateCollaborator}
+          onRemoveCollab={handleRemoveCollaborator}
           onTogglePublic={async (makePublic) => {
             setShareLoading(true)
             try {
@@ -609,7 +746,7 @@ export default function NoteEditor() {
             a.click()
             URL.revokeObjectURL(a.href)
           }}
-          onClose={() => setShowShare(false)}
+          onClose={() => { setShowShare(false); setCollabError(null) }}
         />
       )}
     </div>
@@ -618,25 +755,31 @@ export default function NoteEditor() {
 
 // ── Section view ──────────────────────────────────────────────────────────────
 
-function SectionViewCard({ section, showingRevisions, onEdit, onDelete, onToggleRevisions }) {
+function SectionViewCard({ section, showingRevisions, canEdit, onEdit, onDelete, onToggleRevisions }) {
   return (
     <div className="section-view">
 
       {/* Hover-reveal action toolbar — absolutely positioned top-right */}
       <div className="section-view-actions">
-        <button
-          className={`btn btn-ghost btn-icon btn-sm ${showingRevisions ? 'active' : ''}`}
-          onClick={onToggleRevisions}
-          data-tooltip="Version history"
-        >
-          <Clock size={13} />
-        </button>
-        <button className="btn btn-ghost btn-icon btn-sm" onClick={onEdit} data-tooltip="Edit section">
-          <Pencil size={13} />
-        </button>
-        <button className="btn btn-ghost btn-icon btn-sm text-danger" onClick={onDelete} data-tooltip="Delete section">
-          <Trash2 size={13} />
-        </button>
+        {canEdit && (
+          <button
+            className={`btn btn-ghost btn-icon btn-sm ${showingRevisions ? 'active' : ''}`}
+            onClick={onToggleRevisions}
+            data-tooltip="Version history"
+          >
+            <Clock size={13} />
+          </button>
+        )}
+        {canEdit && (
+          <button className="btn btn-ghost btn-icon btn-sm" onClick={onEdit} data-tooltip="Edit section">
+            <Pencil size={13} />
+          </button>
+        )}
+        {canEdit && (
+          <button className="btn btn-ghost btn-icon btn-sm text-danger" onClick={onDelete} data-tooltip="Delete section">
+            <Trash2 size={13} />
+          </button>
+        )}
       </div>
 
       {/* Small type label above heading */}
@@ -896,7 +1039,14 @@ function CorrectionPrompt({ onSave, onDismiss }) {
 
 // ── Share modal ───────────────────────────────────────────────────────────────
 
-function ShareModal({ note, loading, copied, onTogglePublic, onCopy, onDownload, onClose }) {
+const PERMISSION_LABELS = { view: 'View only', edit: 'Can edit', comment: 'Can comment' }
+
+function ShareModal({
+  note, loading, copied,
+  collaborators, collabEmail, collabPermission, collabInviting, collabError,
+  onCollabEmailChange, onCollabPermissionChange, onInvite, onUpdateCollab, onRemoveCollab,
+  onTogglePublic, onCopy, onDownload, onClose,
+}) {
   const isPublic = note?.is_public ?? false
   const shareUrl = isPublic && note?.public_slug
     ? `${window.location.origin}/share/${note.public_slug}`
@@ -911,6 +1061,82 @@ function ShareModal({ note, loading, copied, onTogglePublic, onCopy, onDownload,
           <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose} style={{ marginLeft: 'auto' }}>
             <X size={15} />
           </button>
+        </div>
+
+        {/* ── Invite collaborators ── */}
+        <div className="share-section">
+          <div className="share-section-row" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Users size={15} className="share-icon-public" />
+              <div>
+                <p className="share-section-title">Invite collaborators</p>
+                <p className="share-section-sub">Invited users can only access this note — not your other notes.</p>
+              </div>
+            </div>
+
+            {/* Invite form */}
+            <div className="collab-invite-row">
+              <input
+                className="input collab-email-input"
+                type="email"
+                placeholder="Email address"
+                value={collabEmail}
+                onChange={e => onCollabEmailChange(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && onInvite()}
+                disabled={collabInviting}
+              />
+              <select
+                className="select collab-perm-select"
+                value={collabPermission}
+                onChange={e => onCollabPermissionChange(e.target.value)}
+                disabled={collabInviting}
+              >
+                <option value="view">View only</option>
+                <option value="edit">Can edit</option>
+                <option value="comment">Can comment</option>
+              </select>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={onInvite}
+                disabled={collabInviting || !collabEmail.trim()}
+              >
+                {collabInviting
+                  ? <Loader2 size={13} className="spin" />
+                  : <><UserPlus size={13} /> Invite</>}
+              </button>
+            </div>
+
+            {collabError && (
+              <p className="text-danger text-xs" style={{ marginTop: -4 }}>{collabError}</p>
+            )}
+          </div>
+
+          {/* Existing collaborators list */}
+          {collaborators.length > 0 && (
+            <div className="collab-list">
+              {collaborators.map(c => (
+                <div key={c.id} className="collab-row">
+                  <span className="collab-email">{c.invitee_email}</span>
+                  <select
+                    className="select collab-perm-select-inline"
+                    value={c.permission}
+                    onChange={e => onUpdateCollab(c.id, e.target.value)}
+                  >
+                    <option value="view">View only</option>
+                    <option value="edit">Can edit</option>
+                    <option value="comment">Can comment</option>
+                  </select>
+                  <button
+                    className="btn btn-ghost btn-icon btn-sm text-danger"
+                    onClick={() => onRemoveCollab(c.id)}
+                    title="Remove collaborator"
+                  >
+                    <UserX size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Share to web ── */}
@@ -959,6 +1185,73 @@ function ShareModal({ note, loading, copied, onTogglePublic, onCopy, onDownload,
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+
+// ── Comment panel ─────────────────────────────────────────────────────────────
+
+function CommentPanel({ comments, canComment, currentUserId, isOwner, commentContent, onContentChange, onSubmit, onDelete, submitting }) {
+  if (comments.length === 0 && !canComment) return null
+
+  return (
+    <div className="comment-panel">
+      <div className="comment-panel-header">
+        <MessageSquare size={14} />
+        <span>Comments</span>
+        {comments.length > 0 && <span className="comment-count">{comments.length}</span>}
+      </div>
+
+      {comments.length === 0 && (
+        <p className="text-faint text-sm" style={{ padding: '8px 0' }}>No comments yet.</p>
+      )}
+
+      <div className="comment-list">
+        {comments.map(c => (
+          <div key={c.id} className="comment-item">
+            <div className="comment-meta">
+              <span className="comment-author">{c.user_name ?? 'Anonymous'}</span>
+              <span className="comment-date text-faint text-xs">
+                {new Date(c.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              </span>
+              {(c.user_id === currentUserId || isOwner) && (
+                <button
+                  className="btn btn-ghost btn-icon btn-sm text-danger comment-delete-btn"
+                  onClick={() => onDelete(c.id)}
+                  title="Delete comment"
+                >
+                  <Trash2 size={11} />
+                </button>
+              )}
+            </div>
+            <p className="comment-content">{c.content}</p>
+          </div>
+        ))}
+      </div>
+
+      {canComment && (
+        <div className="comment-input-row">
+          <textarea
+            className="input comment-textarea"
+            placeholder="Add a comment…"
+            rows={2}
+            value={commentContent}
+            onChange={e => onContentChange(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) onSubmit()
+            }}
+            disabled={submitting}
+          />
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={onSubmit}
+            disabled={submitting || !commentContent.trim()}
+          >
+            {submitting ? <Loader2 size={13} className="spin" /> : <><Send size={13} /> Post</>}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

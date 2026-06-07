@@ -254,6 +254,52 @@ export function shareNote(id, isPublic)    { return patch(`/api/notes/${id}/shar
 export function getPublicNote(slug)        { return get(`/api/notes/public/${slug}`) }
 
 
+// ── Collaborators ─────────────────────────────────────────────────────────────
+
+/** List collaborators on a note (owner only). */
+export function listCollaborators(noteId) {
+  return get(`/api/notes/${noteId}/collaborators`)
+}
+
+/** Invite a collaborator by email with a given permission level. */
+export function inviteCollaborator(noteId, email, permission) {
+  return post(`/api/notes/${noteId}/collaborators`, { email, permission })
+}
+
+/** Change a collaborator's permission (owner only). */
+export function updateCollaboratorPermission(noteId, collabId, permission) {
+  return patch(`/api/notes/${noteId}/collaborators/${collabId}`, { permission })
+}
+
+/** Remove a collaborator from a note (owner only). */
+export function removeCollaborator(noteId, collabId) {
+  return del(`/api/notes/${noteId}/collaborators/${collabId}`)
+}
+
+/** Get notes that have been shared with the current user (not owned by them). */
+export function getSharedNotes() {
+  return get('/api/me/shared-notes')
+}
+
+
+// ── Comments ──────────────────────────────────────────────────────────────────
+
+/** List comments on a note. Requires any access level. */
+export function listComments(noteId) {
+  return get(`/api/notes/${noteId}/comments`)
+}
+
+/** Add a comment to a note. */
+export function addComment(noteId, content, userName) {
+  return post(`/api/notes/${noteId}/comments`, { content, user_name: userName })
+}
+
+/** Soft-delete a comment (own comments, or owner deleting any comment). */
+export function deleteComment(commentId) {
+  return del(`/api/comments/${commentId}`)
+}
+
+
 // ── Sections ──────────────────────────────────────────────────────────────────
 
 export function listSections(noteId)               { return get(`/api/notes/${noteId}/sections`) }
