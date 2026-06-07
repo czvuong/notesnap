@@ -401,6 +401,14 @@ export default function NoteEditor() {
     </div>
   )
 
+  // ── Permission helpers (treat missing my_permission as "owner") ─────────────
+  // If the backend hasn't returned my_permission yet, default to owner behaviour
+  // so Share / Delete / edit buttons always appear for the note's actual owner.
+  const perm       = note?.my_permission   // "owner"|"view"|"edit"|"comment"|undefined
+  const isOwner    = !perm || perm === 'owner'
+  const canEdit    = isOwner || perm === 'edit'
+  const canComment = perm !== 'view'       // undefined → true (owner can comment)
+
   return (
     <div className="note-editor">
 
@@ -411,11 +419,11 @@ export default function NoteEditor() {
         </Link>
         <div className="editor-topbar-actions">
           {/* Permission badge for collaborators */}
-          {note?.my_permission && note.my_permission !== 'owner' && (
-            <span className={`badge badge-sm collab-permission-badge collab-permission-badge--${note.my_permission}`}>
-              {note.my_permission === 'view'    && <><Lock size={10} /> View only</>}
-              {note.my_permission === 'edit'    && <><Pencil size={10} /> Can edit</>}
-              {note.my_permission === 'comment' && <><MessageSquare size={10} /> Can comment</>}
+          {perm && !isOwner && (
+            <span className={`badge badge-sm collab-permission-badge collab-permission-badge--${perm}`}>
+              {perm === 'view'    && <><Lock size={10} /> View only</>}
+              {perm === 'edit'    && <><Pencil size={10} /> Can edit</>}
+              {perm === 'comment' && <><MessageSquare size={10} /> Can comment</>}
             </span>
           )}
           <Link to={`/study?note=${id}`} className="btn btn-secondary btn-sm">
@@ -431,7 +439,7 @@ export default function NoteEditor() {
             </button>
           )}
           {/* Share & collaborator management — owner only */}
-          {(!note || note.my_permission === 'owner') && (
+          {(!note || isOwner) && (
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => setShowShare(true)}
@@ -445,7 +453,7 @@ export default function NoteEditor() {
             </button>
           )}
           {/* Delete — owner only */}
-          {(!note || note.my_permission === 'owner') && (
+          {(!note || isOwner) && (
             <button className="btn btn-ghost btn-sm text-danger" onClick={() => setShowDelete(true)}>
               <Trash2 size={14} /> Delete
             </button>
@@ -506,7 +514,7 @@ export default function NoteEditor() {
             ) : (
               <>
                 <h1 className="editor-title">{note.title}</h1>
-                {note.my_permission === 'owner' || note.my_permission === 'edit' ? (
+                {canEdit ? (
                   <button className="btn btn-ghost btn-icon btn-sm" onClick={startEditTitle} data-tooltip="Edit title">
                     <Pencil size={14} />
                   </button>
@@ -549,7 +557,7 @@ export default function NoteEditor() {
                   <SectionViewCard
                     section={section}
                     showingRevisions={revisionsId === section.id}
-                    canEdit={note.my_permission === 'owner' || note.my_permission === 'edit'}
+                    canEdit={canEdit}
                     onEdit={() => startEdit(section)}
                     onDelete={() => handleDeleteSection(section.id)}
                     onToggleRevisions={() => toggleRevisions(section.id)}
@@ -569,7 +577,7 @@ export default function NoteEditor() {
             ))}
           </div>
 
-          {(note.my_permission === 'owner' || note.my_permission === 'edit') && (
+          {canEdit && (
             <button className="btn btn-secondary btn-sm mt-3" onClick={handleAddSection}>
               <Plus size={13} /> Add section
             </button>
@@ -578,9 +586,9 @@ export default function NoteEditor() {
           {/* ── Comment panel ── */}
           <CommentPanel
             comments={comments}
-            canComment={note.my_permission !== 'view'}
+            canComment={canComment}
             currentUserId={clerkUser?.id}
-            isOwner={note.my_permission === 'owner'}
+            isOwner={isOwner}
             commentContent={commentContent}
             onContentChange={setCommentContent}
             onSubmit={handleAddComment}

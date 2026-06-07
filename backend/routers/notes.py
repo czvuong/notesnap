@@ -16,10 +16,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_, text
 from sqlalchemy.orm import Session
 
-from auth import get_current_user
+from auth import get_current_user, get_current_user_info
 from config import settings
 from database import get_db
-from models import Course, Note, NoteSection, NoteTag, Tag
+from models import Course, Note, NoteCollaborator, NoteSection, NoteTag, Tag
+from typing import Optional, Tuple
 from schemas import (
     MessageOut,
     NoteCreate,
@@ -88,6 +89,29 @@ def _build_summary(note: Note) -> NoteSummaryOut:
         updated_at=note.updated_at,
     )
 
+def _get_collab_permission(
+    db: Session, note_id: str, user_id: str, email: Optional[str]
+) -> Optional[str]:
+    """
+    Returns the collaborator's permission string ("view"|"edit"|"comment")
+    if the user has been invited to this note, else None.
+    Also backfills invitee_user_id on first email-matched access.
+    """
+    filters = [NoteCollaborator.invitee_user_id == user_id]
+    if email:
+        filters.append(NoteCollaborator.invitee_email == email.lower())
+    collab = db.query(NoteCollaborator).filter(
+        NoteCollaborator.note_id == note_id,
+        or_(*filters),
+    ).first()
+    if not collab:
+        return None
+    if collab.invitee_user_id is None and user_id:
+        collab.invitee_user_id = user_id
+        db.commit()
+    return collab.permission
+
+
 def _get_sharing_status(db: Session, note_id: str) -> dict:
     """
     Read is_public / public_slug via raw SQL so we degrade gracefully if
@@ -134,6 +158,7 @@ def _build_detail(note: Note) -> NoteDetailOut:
         )
         for s in active_sections
     ]
+    collab_count = len([c for c in note.collaborators]) if hasattr(note, 'collaborators') else 0
     return NoteDetailOut(
         id=note.id,
         title=note.title,
@@ -144,6 +169,7 @@ def _build_detail(note: Note) -> NoteDetailOut:
         ai_model_used=note.ai_model_used,
         tags=tags,
         sections=sections_out,
+        collaborators_count=collab_count,
         created_at=note.created_at,
         updated_at=note.updated_at,
     )
@@ -302,12 +328,35 @@ def get_public_note(slug: str, db: Session = Depends(get_db)):
 def get_note(
     note_id: str,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user),
+    current_user_info: Tuple[str, Optional[str]] = Depends(get_current_user_info),
 ):
-    note = _note_or_404(db, note_id, current_user)
+    user_id, email = current_user_info
+
+    # Try owner access first (most common path)
+    note = db.query(Note).filter(
+        Note.id == note_id,
+        Note.deleted_at == None,
+        Note.user_id == user_id,
+    ).first()
+
+    my_permission = "owner"
+
+    if not note:
+        # Try collaborator access
+        note = db.query(Note).filter(
+            Note.id == note_id,
+            Note.deleted_at == None,
+        ).first()
+        if not note:
+            raise HTTPException(status_code=404, detail="Note not found.")
+        perm = _get_collab_permission(db, note_id, user_id, email)
+        if not perm:
+            raise HTTPException(status_code=404, detail="Note not found.")
+        my_permission = perm
+
     detail = _build_detail(note)
     sharing = _get_sharing_status(db, note_id)
-    return detail.model_copy(update=sharing)
+    return detail.model_copy(update={**sharing, "my_permission": my_permission})
 
 
 @router.patch("/{note_id}", response_model=NoteDetailOut)

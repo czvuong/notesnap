@@ -152,6 +152,10 @@ class NoteDetailOut(_Base):
     sections: list[SectionOut] = []
     is_public: bool = False
     public_slug: Optional[str] = None
+    # Collaboration fields
+    # my_permission: "owner" | "view" | "edit" | "comment"
+    my_permission: str = "owner"
+    collaborators_count: int = 0
     created_at: datetime
     updated_at: datetime
 
