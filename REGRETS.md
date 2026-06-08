@@ -46,10 +46,3 @@ The current pipeline (OCR model → structuring model) only works on the UCSD Tr
 
 **Advice:** Document the `AI_PROVIDER=anthropic` fallback prominently in the README. Consider making it the default outside of the UCSD environment.
 
----
-
-## 6. The custom domain was descoped for no good reason
-
-The original proposal included pointing a real domain at the Vercel deployment. I marked this as "no longer planned" because the Vercel subdomain technically works, but a real domain would have made the project feel significantly more polished and taken maybe 20 minutes to set up. I should have just done it.
-
-**Advice:** If a task is on your proposal and takes under 30 minutes, just do it.
