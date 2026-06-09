@@ -164,9 +164,9 @@ These features were not in the original proposal but were built during the proje
 
 **Study tools force-regenerate ("New set" button)**
 
-All three study tool endpoints — flashcards, practice questions, and summary — accept a `force: bool = False` query parameter. When `force=True`, the backend skips the cached result and runs the AI pipeline fresh. The frontend exposes this as a "New set" button in `frontend/src/pages/StudyHub.jsx`. This was added because users wanted to regenerate different flashcard or question sets from the same note without deleting the cached version first.
+All three study tool endpoints — flashcards, practice questions, and summary — accept a `force: bool = False` query parameter. When `force=True`, the backend skips the cached result and runs the AI pipeline fresh. The frontend exposes this as a "New set" button in `frontend/src/pages/StudyHub.jsx`. 
 
-**Collaborative note sharing (Feature 3)**
+**Collaborative note sharing**
 
 A full multi-user sharing system was built on top of the per-user data model:
 
